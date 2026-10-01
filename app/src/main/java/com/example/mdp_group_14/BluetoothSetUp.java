@@ -120,6 +120,7 @@ public class BluetoothSetUp extends Fragment {
     {
         // inflate
         View root = inflater.inflate(R.layout.bluetooth, container, false);
+        Home.registerStatusViews(root);
         // get shared preferences
         sharedPreferences = getActivity().getSharedPreferences("Shared Preferences",
                 Context.MODE_PRIVATE);

@@ -52,6 +52,7 @@ public class BluetoothCommunications extends Fragment {
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.activity_communications, container, false);
+        bindMovementControls(root);
 
 
         ImageButton send;
@@ -80,6 +81,33 @@ public class BluetoothCommunications extends Fragment {
         });
 
         return root;
+    }
+
+    private void bindMovementControls(View root) {
+        ImageButton left = root.findViewById(R.id.leftBtn);
+        ImageButton forward = root.findViewById(R.id.upBtn);
+        ImageButton right = root.findViewById(R.id.rightBtn);
+        ImageButton backLeft = root.findViewById(R.id.bleftBtn);
+        ImageButton back = root.findViewById(R.id.downBtn);
+        ImageButton backRight = root.findViewById(R.id.brightBtn);
+
+        left.setOnClickListener(v -> moveRobot("left", "fl"));
+        forward.setOnClickListener(v -> moveRobot("forward", "f"));
+        right.setOnClickListener(v -> moveRobot("right", "fr"));
+        backLeft.setOnClickListener(v -> moveRobot("backleft", "bl"));
+        back.setOnClickListener(v -> moveRobot("back", "b"));
+        backRight.setOnClickListener(v -> moveRobot("backright", "br"));
+    }
+
+    private void moveRobot(String direction, String command) {
+        GridMap map = Home.getGridMap();
+        if (map != null && map.getCanDrawRobot()) {
+            map.moveRobot(direction);
+            Home.refreshLabel();
+            Home.printMessage(command);
+        } else if (Home.getRobotStatusTextView() != null) {
+            Home.getRobotStatusTextView().setText("Please press 'SET START POINT'");
+        }
     }
 
     @Override

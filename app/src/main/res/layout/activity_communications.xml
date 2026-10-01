@@ -14,8 +14,15 @@
         android:layout_height="match_parent">
 
         <LinearLayout
-            android:layout_width="400dp"
-            android:layout_height="350dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:orientation="vertical">
 
             <TextView
@@ -42,8 +49,9 @@
 
                 <EditText
                     android:id="@+id/typeBoxEditText"
-                    android:layout_width="302dp"
+                    android:layout_width="0dp"
                     android:layout_height="50dp"
+                    android:layout_weight="1"
                     android:layout_marginStart="10dp"
                     android:layout_marginTop="5dp"
                     android:gravity="center|start"
@@ -70,6 +78,8 @@
 
 
             </LinearLayout>
+        </LinearLayout>
+        <include layout="@layout/movement_controls" />
         </LinearLayout>
 
     </RelativeLayout>

@@ -126,36 +126,9 @@ public class Home extends Fragment {
 
         editor.commit();
 
-        // Toolbar
-        ImageButton bluetoothButton = root.findViewById(R.id.bluetoothButton);
-        bluetoothButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                ViewPager viewPager = getActivity().findViewById(R.id.view_pager2);
-                viewPager.setCurrentItem(1);
-
-            }
-        });
-
-        // Bluetooth Status
-        bluetoothStatus = root.findViewById(R.id.bluetoothStatus);
-        bluetoothDevice = root.findViewById(R.id.bluetoothConnectedDevice);
-
-        if (BluetoothConnectionService.BluetoothConnectionStatus) {
-            bluetoothStatus.setText("connected");
-            bluetoothStatus.setTextColor(android.graphics.Color.GREEN);
-            //String connectedName = BluetoothConnectionService.getConnectedDeviceName();
-            //if (connectedName != null) bluetoothDevice.setText(connectedName);
-        }
-
-
         // Map
         gridMap = new GridMap(getContext());
         gridMap = root.findViewById(R.id.mapView);
-        xAxisTextView = root.findViewById(R.id.xAxisTextView);
-        yAxisTextView = root.findViewById(R.id.yAxisTextView);
-        directionAxisTextView = root.findViewById(R.id.directionAxisTextView);
 
         // initialize ITEM_LIST and imageBearings strings
         for (int i = 0; i < 20; i++) {
@@ -166,17 +139,6 @@ public class Home extends Fragment {
         }
         // Recover the last automatically saved map after a crash or relaunch.
         gridMap.restoreObstacleMap();
-
-        // Controller
-        upBtn = root.findViewById(R.id.upBtn);
-        downBtn = root.findViewById(R.id.downBtn);
-        leftBtn = root.findViewById(R.id.leftBtn);
-        rightBtn = root.findViewById(R.id.rightBtn);
-        brightBtn = root.findViewById(R.id.brightBtn);
-        bleftBtn = root.findViewById(R.id.bleftBtn);
-
-        // Robot Status
-        robotStatusTextView = root.findViewById(R.id.robotStatus);
 
         myDialog = new ProgressDialog(getContext());
         myDialog.setMessage("Waiting for other device to reconnect...");
@@ -200,6 +162,20 @@ public class Home extends Fragment {
         return gridMap;
     }
     public static TextView getRobotStatusTextView() {  return robotStatusTextView; }
+
+    /** Connects the live status model to the status card on the Bluetooth tab. */
+    public static void registerStatusViews(View root) {
+        bluetoothStatus = root.findViewById(R.id.bluetoothStatus);
+        bluetoothDevice = root.findViewById(R.id.bluetoothConnectedDevice);
+        robotStatusTextView = root.findViewById(R.id.robotStatus);
+        xAxisTextView = root.findViewById(R.id.xAxisTextView);
+        yAxisTextView = root.findViewById(R.id.yAxisTextView);
+        directionAxisTextView = root.findViewById(R.id.directionAxisTextView);
+        if (BluetoothConnectionService.BluetoothConnectionStatus && bluetoothStatus != null) {
+            bluetoothStatus.setText("connected");
+            bluetoothStatus.setTextColor(android.graphics.Color.GREEN);
+        }
+    }
 
     public static ImageButton getUpBtn() { return upBtn; }
     public static ImageButton getDownBtn() { return downBtn; }
@@ -328,13 +304,14 @@ public class Home extends Fragment {
         // bluetooth_bridge_node.cpp / task1_runner.py protocol has no tablet->robot ROBOT message
         // (ROBOT only ever flows robot->tablet), so that outbound send was removed.
         gridMap.setRobotDirection(direction);
-        directionAxisTextView.setText(sharedPreferences.getString("direction","")); //changes the UI direction display as well
+        if (directionAxisTextView != null)
+            directionAxisTextView.setText(sharedPreferences.getString("direction","")); //changes the UI direction display as well
     }
 
     public static void refreshLabel() {
-        xAxisTextView.setText(String.valueOf(gridMap.getCurCoord()[0]-1));
-        yAxisTextView.setText(String.valueOf(gridMap.getCurCoord()[1]-1));
-        directionAxisTextView.setText(sharedPreferences.getString("direction",""));
+        if (xAxisTextView != null) xAxisTextView.setText(String.valueOf(gridMap.getCurCoord()[0]-1));
+        if (yAxisTextView != null) yAxisTextView.setText(String.valueOf(gridMap.getCurCoord()[1]-1));
+        if (directionAxisTextView != null) directionAxisTextView.setText(sharedPreferences.getString("direction",""));
     }
 
     private static void showLog(String message) {

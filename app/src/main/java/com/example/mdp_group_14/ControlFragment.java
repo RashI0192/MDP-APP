@@ -98,12 +98,12 @@ public class ControlFragment extends Fragment {
                 Context.MODE_PRIVATE);
 
         // variable initialization
-        moveForwardImageBtn = Home.getUpBtn();
-        turnRightImageBtn = Home.getRightBtn();
-        moveBackImageBtn = Home.getDownBtn();
-        turnLeftImageBtn = Home.getLeftBtn();
-        turnbleftImageBtn = Home.getbLeftBtn();
-        turnbrightImageBtn = Home.getbRightBtn();
+        moveForwardImageBtn = root.findViewById(R.id.upBtn);
+        turnRightImageBtn = root.findViewById(R.id.rightBtn);
+        moveBackImageBtn = root.findViewById(R.id.downBtn);
+        turnLeftImageBtn = root.findViewById(R.id.leftBtn);
+        turnbleftImageBtn = root.findViewById(R.id.bleftBtn);
+        turnbrightImageBtn = root.findViewById(R.id.brightBtn);
         exploreTimeTextView = root.findViewById(R.id.exploreTimeTextView2);
         fastestTimeTextView = root.findViewById(R.id.fastestTimeTextView2);
         exploreButton = root.findViewById(R.id.exploreToggleBtn2);
