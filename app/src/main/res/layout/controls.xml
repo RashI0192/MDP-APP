@@ -2,23 +2,24 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="260dp"
-    android:gravity="center_vertical"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
+    android:gravity="center"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
     android:orientation="horizontal">
 
-    <LinearLayout android:layout_width="145dp" android:layout_height="wrap_content" android:orientation="vertical" android:padding="4dp">
-        <TextView android:id="@+id/exploreTextView" android:layout_width="match_parent" android:layout_height="38dp" android:gravity="center" android:text="TASK" android:textColor="@color/colorBlack" android:textSize="13sp" android:textStyle="bold" android:background="@color/pastelPink" />
-        <TextView android:id="@+id/exploreTimeTextView2" android:layout_width="match_parent" android:layout_height="30dp" android:background="@color/white" android:gravity="center" android:text="00:00" android:textColor="@color/black" android:textSize="20sp" android:textStyle="bold" />
+    <LinearLayout android:layout_width="156dp" android:layout_height="wrap_content" android:orientation="vertical" android:padding="4dp">
+        <TextView android:id="@+id/exploreTextView" android:layout_width="match_parent" android:layout_height="38dp" android:gravity="center" android:text="TASK" android:textColor="@color/colorBlack" android:textSize="13sp" android:textStyle="bold" android:background="@drawable/control_red_box" />
+        <TextView android:id="@+id/exploreTimeTextView2" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="2dp" android:background="@drawable/control_white_box" android:gravity="center" android:text="00:00" android:textColor="@color/black" android:textSize="20sp" android:textStyle="bold" />
         <ToggleButton android:id="@+id/exploreToggleBtn2" android:layout_width="match_parent" android:layout_height="42dp" android:layout_marginTop="6dp" android:visibility="gone" android:textOff="START" android:textOn="STOP" />
         <Button android:id="@+id/explorePauseBtn" android:layout_width="match_parent" android:layout_height="38dp" android:visibility="gone" android:text="PAUSE" />
-        <Button android:id="@+id/sendObstaclesButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="4dp" android:backgroundTint="@color/pastelPink" android:text="SEND OBSTACLES" android:textColor="@color/black" android:textSize="10sp" android:contentDescription="Send obstacle map to robot" />
-        <Button android:id="@+id/challengeResetButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="4dp" android:backgroundTint="@color/pastelPink" android:text="RESET" android:textColor="@color/black" />
+        <Button android:id="@+id/sendObstaclesButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="6dp" android:backgroundTint="@color/colorYellow" android:text="SEND OBSTACLES" android:textColor="@color/black" android:textSize="10sp" android:contentDescription="Send obstacle map to robot" />
+        <Button android:id="@+id/challengeResetButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="6dp" android:backgroundTint="@color/lightRed" android:text="RESET" android:textColor="@color/black" />
     </LinearLayout>
 
-    <LinearLayout android:layout_width="145dp" android:layout_height="wrap_content" android:orientation="vertical" android:padding="4dp">
-        <Button android:id="@+id/practiceTasksBtn" android:layout_width="match_parent" android:layout_height="38dp" android:backgroundTint="@color/pastelPink" android:text="PRACTICE" android:textColor="@color/black" android:textSize="11sp" android:textStyle="bold" />
-        <TextView android:id="@+id/fastestTimeTextView2" android:layout_width="match_parent" android:layout_height="30dp" android:background="@color/white" android:gravity="center" android:text="00:00" android:textColor="@color/black" android:textSize="20sp" android:textStyle="bold" />
+    <LinearLayout android:layout_width="156dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:orientation="vertical" android:padding="4dp">
+        <Button android:id="@+id/practiceTasksBtn" android:layout_width="match_parent" android:layout_height="38dp" android:backgroundTint="@color/lightRed" android:text="PRACTICE" android:textColor="@color/black" android:textSize="11sp" android:textStyle="bold" />
+        <Button android:id="@+id/startRpiRunButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="6dp" android:backgroundTint="@color/colorYellow" android:text="START RPI RUN" android:textColor="@color/black" android:textSize="10sp" android:textStyle="bold" android:contentDescription="Tell the Raspberry Pi to start the challenge run" />
+        <TextView android:id="@+id/fastestTimeTextView2" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="2dp" android:background="@drawable/control_white_box" android:gravity="center" android:text="00:00" android:textColor="@color/black" android:textSize="20sp" android:textStyle="bold" />
         <ToggleButton android:id="@+id/fastestToggleBtn2" android:layout_width="match_parent" android:layout_height="42dp" android:visibility="gone" android:textOff="START" android:textOn="STOP" />
         <Button android:id="@+id/fastestPauseBtn" android:layout_width="match_parent" android:layout_height="38dp" android:visibility="gone" android:text="PAUSE" />
         <ImageButton android:id="@+id/fastestResetImageBtn2" style="@style/Widget.AppCompat.ImageButton" android:layout_width="38dp" android:layout_height="38dp" android:visibility="gone" />

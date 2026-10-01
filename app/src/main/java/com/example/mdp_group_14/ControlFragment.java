@@ -43,6 +43,7 @@ public class ControlFragment extends Fragment {
 
     Button sendObstaclesButton;
     Button challengeResetButton;
+    Button startRpiRunButton;
     Button explorePauseButton, fastestPauseButton, practiceTasksButton;
     private long exploreElapsed, fastestElapsed, practiceStarted, practiceElapsed;
     private boolean explorePaused, fastestPaused, practiceRunning, practicePaused;
@@ -112,6 +113,7 @@ public class ControlFragment extends Fragment {
         fastestButton = root.findViewById(R.id.fastestToggleBtn2);
         fastestResetButton = root.findViewById(R.id.fastestResetImageBtn2);
         challengeResetButton = root.findViewById(R.id.challengeResetButton);
+        startRpiRunButton = root.findViewById(R.id.startRpiRunButton);
         explorePauseButton = root.findViewById(R.id.explorePauseBtn);
         fastestPauseButton = root.findViewById(R.id.fastestPauseBtn);
         practiceTasksButton = root.findViewById(R.id.practiceTasksBtn);
@@ -249,6 +251,15 @@ public class ControlFragment extends Fragment {
             resetExploreTimer(false);
             resetFastestTimer(false);
             robotStatusTextView.setText("Reset sent");
+        });
+
+        // Start the RPi run independently of the optional local challenge timers.
+        // Home.printMessage appends the required line terminator before transmission.
+        startRpiRunButton.setOnClickListener(v -> {
+            Home.printMessage("BEGIN");
+            Home.refreshMessageReceivedNS("TABLET -> RPi: BEGIN");
+            robotStatusTextView.setText("Start requested");
+            showToast("Start requested from RPi");
         });
 
         // Start Task 1 challenge
