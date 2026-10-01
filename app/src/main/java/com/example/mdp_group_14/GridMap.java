@@ -62,6 +62,7 @@ public class GridMap extends View {
     private final Paint arrowColor = new Paint();
     private final Paint fastestPathColor = new Paint();
     private final Paint axisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint axisBackgroundPaint = new Paint();
 
     // Robot sprites are reused for every redraw. Decoding/scaling them inside onDraw()
     // caused avoidable allocations and garbage collection during movement.
@@ -94,6 +95,11 @@ public class GridMap extends View {
     Map<String, String> val2IdxMap;
 
     private boolean mapDrawn = false;
+    // The parent changes this view's height when the lower tab changes. Keep the
+    // cached cell geometry tied to the current view size so the axis cells are
+    // never drawn using the previous tab's coordinates.
+    private int cellLayoutWidth = -1;
+    private int cellLayoutHeight = -1;
     private static final int CELL_LENGTH = 5; //length of each cell in cm
     private static final int LEFT_TURNING_RADIUS = 40;
     private static final int RIGHT_TURNING_RADIUS = 41;
@@ -141,6 +147,7 @@ public class GridMap extends View {
         axisPaint.setTextSize(14);
         axisPaint.setTextAlign(Paint.Align.CENTER);
         axisPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        axisBackgroundPaint.setColor(Color.rgb(17, 18, 20));
         maroonPaint.setColor(getResources().getColor(R.color.brightRed));
         maroonPaint.setStrokeWidth(8);
         obstacleColor.setColor(getResources().getColor(R.color.black));
@@ -185,12 +192,17 @@ public class GridMap extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // Create cell coords
-        if (!mapDrawn) {
-            mapDrawn = true;
+        // The map area is resized when switching between Map Config, Chat and
+        // Challenge. Rebuild the geometry if a layout pass happened without a
+        // matching size callback, otherwise the axis numbers can be clipped.
+        if (!mapDrawn || cells == null
+                || cellLayoutWidth != getWidth()
+                || cellLayoutHeight != getHeight()) {
             this.createCell();
+            mapDrawn = true;
         }
 
+        drawAxisBackground(canvas);
         drawIndividualCell(canvas);
         drawHorizontalLines(canvas);
         drawVerticalLines(canvas);
@@ -199,6 +211,17 @@ public class GridMap extends View {
             drawRobot(canvas, curCoord);
         drawObstacles(canvas);
 
+    }
+
+    private void drawAxisBackground(Canvas canvas) {
+        for (int y = 0; y < ROW; y++) {
+            canvas.drawRect(cells[0][y].startX, cells[0][y].startY,
+                    cells[0][y].endX, cells[0][y].endY, axisBackgroundPaint);
+        }
+        for (int x = 1; x <= COL; x++) {
+            canvas.drawRect(cells[x][ROW].startX, cells[x][ROW].startY,
+                    cells[x][ROW].endX, cells[x][ROW].endY, axisBackgroundPaint);
+        }
     }
 
     // draws obstacle cells whenever map refreshes
@@ -443,6 +466,8 @@ public class GridMap extends View {
         cells = new Cell[COL + 1][ROW + 1];
         this.calculateDimension();
         cellSize = this.getCellSize();
+        cellLayoutWidth = getWidth();
+        cellLayoutHeight = getHeight();
 
         for (int x = 0; x <= COL; x++)
             for (int y = 0; y <= ROW; y++)
@@ -463,6 +488,7 @@ public class GridMap extends View {
         if (width > 0 && height > 0) {
             mapDrawn = false;
             createCell();
+            postInvalidateOnAnimation();
         }
     }
 
