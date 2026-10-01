@@ -236,12 +236,27 @@ public class GridMap extends View {
             if (i >= obstacleIds.size() || col < 0 || col >= COL || row < 0 || row >= ROW) {
                 continue;
             }
+            Cell obstacleCell = cells[col + 1][19 - row];
+
+            // Cell objects are rebuilt when the parent switches between Map Config,
+            // Chat, and Challenge because the map view gets a new measured height.
+            // Paint the obstacle from the persistent obstacle list as well as marking
+            // the cell type, so a resize can never erase the black box or its label.
+            canvas.drawRect(
+                    obstacleCell.startX,
+                    obstacleCell.startY,
+                    obstacleCell.endX,
+                    obstacleCell.endY,
+                    obstacleColor
+            );
+
             String bearing = imageBearings.get(row)[col];
             whitePaint.setTextSize(15);
             canvas.drawText(
                     String.valueOf(obstacleIds.get(i)),
-                    cells[col + 1][19 - row].startX + ((cells[1][1].endX - cells[1][1].startX) / 2),
-                    cells[col + 1][19 - row].startY + ((cells[1][1].endY - cells[1][1].startY) / 2) + 5,
+                    (obstacleCell.startX + obstacleCell.endX) / 2f,
+                    (obstacleCell.startY + obstacleCell.endY) / 2f
+                            - ((whitePaint.ascent() + whitePaint.descent()) / 2f),
                     whitePaint
             );
 
@@ -479,7 +494,22 @@ public class GridMap extends View {
                         unexploredColor,
                         "unexplored"
                 );
+
+        // createCell() runs again whenever the map view is resized. Restore the
+        // model-backed obstacle state on the new cells for touch handling and for
+        // any renderer that uses the cell type.
+        restoreObstacleCellTypes();
         showLog("Exiting createCell");
+    }
+
+    private void restoreObstacleCellTypes() {
+        for (int[] obstacle : obstacleCoord) {
+            int col = obstacle[0];
+            int row = obstacle[1];
+            if (col >= 0 && col < COL && row >= 0 && row < ROW) {
+                cells[col + 1][19 - row].setType("obstacle");
+            }
+        }
     }
 
     @Override
