@@ -31,6 +31,7 @@ import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.LinearLayout;
 
 
 import com.google.android.material.tabs.TabLayout;
@@ -105,6 +106,15 @@ public class Home extends Fragment {
         viewPager.setAdapter(sectionsPagerAdapter);
         viewPager.setOffscreenPageLimit(2);
 
+        GridMap mapView = root.findViewById(R.id.mapView);
+        configureMapConfigLayout(mapView, viewPager, true);
+        viewPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
+            @Override
+            public void onPageSelected(int position) {
+                configureMapConfigLayout(mapView, viewPager, position == 0);
+            }
+        });
+
 
         TabLayout tabs = root.findViewById(R.id.tabs);
         tabs.setupWithViewPager(viewPager);
@@ -127,8 +137,7 @@ public class Home extends Fragment {
         editor.commit();
 
         // Map
-        gridMap = new GridMap(getContext());
-        gridMap = root.findViewById(R.id.mapView);
+        gridMap = mapView;
 
         // initialize ITEM_LIST and imageBearings strings
         for (int i = 0; i < 20; i++) {
@@ -156,6 +165,22 @@ public class Home extends Fragment {
         PathTranslator pathTranslator = new PathTranslator(gridMap);
 //        pathTranslator.translatePath("MOVE,FORWARD,30");
         return root;
+    }
+
+    /**
+     * Give Map Config a taller map while preserving the existing Chat and
+     * Challenge proportions. GridMap recalculates its cell size from the new
+     * measured dimensions, so taps and dragged obstacles stay aligned.
+     */
+    private void configureMapConfigLayout(GridMap mapView, ViewPager viewPager, boolean mapConfigSelected) {
+        LinearLayout.LayoutParams mapParams = (LinearLayout.LayoutParams) mapView.getLayoutParams();
+        LinearLayout.LayoutParams pagerParams = (LinearLayout.LayoutParams) viewPager.getLayoutParams();
+
+        mapParams.weight = mapConfigSelected ? 1.45f : 1.0f;
+        pagerParams.weight = mapConfigSelected ? 0.55f : 1.0f;
+
+        mapView.setLayoutParams(mapParams);
+        viewPager.setLayoutParams(pagerParams);
     }
 
     public static GridMap getGridMap() {
