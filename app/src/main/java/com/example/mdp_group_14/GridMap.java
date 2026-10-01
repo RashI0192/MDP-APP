@@ -457,6 +457,15 @@ public class GridMap extends View {
         showLog("Exiting createCell");
     }
 
+    @Override
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        if (width > 0 && height > 0) {
+            mapDrawn = false;
+            createCell();
+        }
+    }
+
     // receives col and row values that are just +1 of the visual col and row value (x & y)
     public void setStartCoord(int col, int row) {
         showLog("Entering setStartCoord");
@@ -533,7 +542,12 @@ public class GridMap extends View {
     }
 
     private void calculateDimension() {
-        this.setCellSize(getWidth() / (COL + 1));
+        // The map contains 20 grid cells plus one axis cell. Fit the complete
+        // square into the available view, otherwise the bottom rows are drawn
+        // underneath the tabs on smaller screens.
+        this.setCellSize(Math.min(
+                getWidth() / (float) (COL + 1),
+                getHeight() / (float) (ROW + 1)));
     }
 
     private int convertRow(int row) {
@@ -896,13 +910,14 @@ public class GridMap extends View {
             // if dropped within mapview but outside drawn grids, remove obstacle from lists
             // drag to left side of grid
             else if (endColumn <= 0 || endRow <= 0) {
-                int obstacleid2 = -1;
+                int removedObstacleId = -1;
                 for (int i = 0; i < obstacleCoord.size(); i++) {
                     if (Arrays.equals(obstacleCoord.get(i),
                             new int[]{initialColumn - 1, initialRow - 1})) {
+                        removedObstacleId = obstacleIds.get(i);
                         obstacleCoord.remove(i);
                         obstacleIds.remove(i);
-                        obstacleid2 = i;
+                        break;
                     }
 
 
@@ -914,8 +929,8 @@ public class GridMap extends View {
 
                 //updateStatus( obstacleNumber + "," + (initialColumn) + "," + (initialRow) + ", Bearing: " + "-1");
 
-                if (((initialColumn - 1)) >= 0 && ((initialRow - 1)) >= 0) {
-                    Home.printMessage("OBSTACLE" + "," + obstacleIds.get(obstacleid2) + "," + (initialColumn) * 10 + "," + (initialRow) * 10 + "," + "-1");
+                if (removedObstacleId >= 0) {
+                    Home.printMessage("OBSTACLE" + "," + removedObstacleId + "," + (initialColumn) * 10 + "," + (initialRow) * 10 + "," + "-1");
                 } else {
                     showLog("out of grid");
                 }
