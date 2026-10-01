@@ -254,11 +254,9 @@ public class ControlFragment extends Fragment {
                     Home.printMessage("STOP"); //send a string "STOP" to the robot
                 }
                 else if (exploreToggleBtn.getText().equals("STOP")) {
-                    if (!Home.isRobotReady()) {
-                        showToast("Wait for STATUS: Ready after reset and planning");
-                        exploreToggleBtn.setChecked(false);
-                        return;
-                    }
+                    // The challenge timer is a local UI timer.  Do not make its
+                    // start depend on the asynchronous RPi STATUS:Ready message.
+                    // BEGIN is still sent below so the RPi can start its run.
                     Home.printMessage("BEGIN"); //send a string "BEGIN" to the RPI
                     // Start timer
                     Home.stopTimerFlag = false;
