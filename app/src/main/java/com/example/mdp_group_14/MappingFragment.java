@@ -29,17 +29,14 @@ public class MappingFragment extends Fragment {
     ImageButton saveMapObstacle;
     Button resetMapBtn, deleteObstacleBtn;
     ImageButton obstacleImageBtn;
-    ToggleButton setStartPointToggleBtn;
     GridMap gridMap;
 
     Switch dragSwitch;
-    Switch changeObstacleSwitch;
 
     static String imageID="";
     static String imageBearing="North";
     static String path="LL";
     static boolean dragStatus;
-    static boolean changeObstacleStatus;
 
     String direction = "";
     @Override
@@ -63,12 +60,10 @@ public class MappingFragment extends Fragment {
 
         resetMapBtn = root.findViewById(R.id.resetBtn);
         deleteObstacleBtn = root.findViewById(R.id.deleteObstacleBtn);
-        setStartPointToggleBtn = root.findViewById(R.id.startpointToggleBtn);
         obstacleImageBtn = root.findViewById(R.id.addObstacleBtn);
 //        updateButton = root.findViewById(R.id.updateMapBtn);
         saveMapObstacle = root.findViewById(R.id.saveBtn);
         dragSwitch = root.findViewById(R.id.dragSwitch);
-        changeObstacleSwitch = root.findViewById(R.id.changeObstacleSwitch);
         resetMapBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -96,38 +91,6 @@ public class MappingFragment extends Fragment {
                 dragStatus = isChecked;
                 if (dragStatus) {
                     gridMap.setSetObstacleStatus(false);
-                    changeObstacleSwitch.setChecked(false);
-                }
-            }
-        });
-
-        // switch for changing obstacle
-        changeObstacleSwitch.setOnCheckedChangeListener( new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton toggleButton, boolean isChecked) {
-                showToast("Changing Obstacle is " + (isChecked ? "on" : "off"));
-                changeObstacleStatus = isChecked;
-                if (changeObstacleStatus) {
-                    gridMap.setSetObstacleStatus(false);
-                    dragSwitch.setChecked(false);
-                }
-            }
-        });
-
-        setStartPointToggleBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked setStartPointToggleBtn");
-                // 2nd consecutive tap on the toggle btn (logic to handle other buttons being tapped is in gridmap.toggleCheckedBtn())
-                if (setStartPointToggleBtn.getText().equals("SET START POINT")) {
-                    showToast("Cancelled select starting point");
-                    setStartPointToggleBtn.setBackgroundResource(R.drawable.border_black);
-                }
-                else {  // 1st tap on the toggle btn
-                    showToast("Please select starting point");
-                    gridMap.setStartCoordStatus(true);
-                    gridMap.toggleCheckedBtn("setStartPointToggleBtn");
-                    setStartPointToggleBtn.setBackgroundResource(R.drawable.border_black_pressed);
                 }
             }
         });
@@ -244,7 +207,6 @@ public class MappingFragment extends Fragment {
                     obstacleImageBtn.setBackgroundResource(R.drawable.border_black);
                 }
                 // disable the other on touch functions
-                changeObstacleSwitch.setChecked(false);
                 dragSwitch.setChecked(false);
                 showLog("obstacle status = " + gridMap.getSetObstacleStatus());
                 showLog("Exiting obstacleImageBtn");

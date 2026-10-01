@@ -121,6 +121,10 @@ public class GridMap extends View {
     static ClipData clipData;
     static Object localState;
     int initialColumn, initialRow;
+    private float touchDownX;
+    private float touchDownY;
+    private boolean dragStarted;
+    private static final float DRAG_START_DISTANCE_PX = 28f;
     public Canvas canvas;
 
     public GridMap(Context context, @Nullable AttributeSet attrs) {
@@ -590,6 +594,14 @@ public class GridMap extends View {
         int visualRow = row;
         int[] obstacleCoord = new int[]{col - 1, visualRow - 1};
 
+        // Keep every obstacle created from the grid in the same data model used
+        // by manual input, drawing, persistence, and RPi transmission.
+        if (imageBearings.get(visualRow - 1)[col - 1] == null
+                || imageBearings.get(visualRow - 1)[col - 1].isEmpty()) {
+            imageBearings.get(visualRow - 1)[col - 1] = "North";
+        }
+        ITEM_LIST.get(visualRow - 1)[col - 1] = "";
+
         GridMap.obstacleCoord.add(obstacleCoord);
         obstacleIds.add(nextObstacleId());
 
@@ -658,6 +670,32 @@ public class GridMap extends View {
         return true;
     }
 
+    /** Rotate an obstacle clockwise and immediately persist/send its new bearing. */
+    private void rotateObstacleAt(int x, int y) {
+        String current = imageBearings.get(y)[x];
+        String next;
+        switch (current) {
+            case "North": next = "East"; break;
+            case "East": next = "South"; break;
+            case "South": next = "West"; break;
+            default: next = "North"; break;
+        }
+        imageBearings.get(y)[x] = next;
+        int index = -1;
+        for (int i = 0; i < obstacleCoord.size(); i++) {
+            if (obstacleCoord.get(i)[0] == x && obstacleCoord.get(i)[1] == y) {
+                index = i;
+                break;
+            }
+        }
+        if (index >= 0) {
+            Home.printMessage("OBSTACLE," + obstacleIds.get(index) + ","
+                    + (x * 10) + "," + (y * 10) + "," + next.toUpperCase() + "\n");
+        }
+        persistObstacleMap();
+        invalidate();
+    }
+
     public void deleteObstacle(int index) {
         if (index < 0 || index >= obstacleCoord.size()) return;
         int[] old = obstacleCoord.remove(index);
@@ -695,7 +733,13 @@ public class GridMap extends View {
                 obstacleCoord.add(new int[]{x, y});
                 obstacleIds.add(nextObstacleId());
                 imageBearings.get(y)[x] = bearing;
-                cells[x + 1][19 - y].setType("obstacle");
+                // The map is restored from Home.onCreateView, before the first
+                // draw pass creates the cell grid. Keep the persisted data and
+                // let onDraw render it once the cells exist.
+                if (cells != null && cells[x + 1] != null
+                        && cells[x + 1][19 - y] != null) {
+                    cells[x + 1][19 - y].setType("obstacle");
+                }
             } catch (NumberFormatException ignored) { }
         }
         invalidate();
@@ -915,6 +959,9 @@ public class GridMap extends View {
             } else {
                 showLog("Drag event failed.");
             }
+            // Keep the shared map state in sync after a move or removal. This also
+            // preserves the existing bearing when the obstacle is moved.
+            persistObstacleMap();
         }
         this.invalidate();
         return true;
@@ -928,16 +975,18 @@ public class GridMap extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         showLog("Entering onTouchEvent");
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            // column and row values are BASED ON THE DISPLAYED MAP (but also +1 as it is not 0-indexed)
-            int column = (int) (event.getX() / cellSize);
-            int row = this.convertRow((int) (event.getY() / cellSize));
+        int action = event.getActionMasked();
+        int column = (int) (event.getX() / cellSize);
+        int row = this.convertRow((int) (event.getY() / cellSize));
 
+        if (action == MotionEvent.ACTION_DOWN) {
+            // column and row values are BASED ON THE DISPLAYED MAP (but also +1 as it is not 0-indexed)
             initialColumn = column;
             initialRow = row;
+            touchDownX = event.getX();
+            touchDownY = event.getY();
+            dragStarted = false;
 
-            ToggleButton setStartPointToggleBtn = ((Activity) this.getContext())
-                    .findViewById(R.id.startpointToggleBtn);
             showLog("event.getX = " + event.getX() + ", event.getY = " + event.getY());
             showLog("row = " + row + ", column = " + column);
 
@@ -957,19 +1006,48 @@ public class GridMap extends View {
                         && imageBearings.get(row - 1)[column - 1].equals("")) {
                     return false;
                 }
+            }
+
+            // Keep the gesture alive so ACTION_MOVE/ACTION_UP can distinguish a tap
+            // from a drag. Starting Android drag-and-drop on ACTION_DOWN consumes the
+            // tap path and made rotation unreachable.
+            if (MappingFragment.dragStatus) return true;
+        }
+
+        if (MappingFragment.dragStatus && action == MotionEvent.ACTION_MOVE
+                && !dragStarted
+                && initialColumn >= 1 && initialColumn <= 20
+                && initialRow >= 1 && initialRow <= 20
+                && !imageBearings.get(initialRow - 1)[initialColumn - 1].isEmpty()) {
+            float dx = event.getX() - touchDownX;
+            float dy = event.getY() - touchDownY;
+            if ((dx * dx) + (dy * dy) >= DRAG_START_DISTANCE_PX * DRAG_START_DISTANCE_PX) {
+                dragStarted = true;
                 View.DragShadowBuilder dragShadowBuilder = new MyDragShadowBuilder(this);
                 this.startDrag(null, dragShadowBuilder, null, 0);
             }
+            return true;
+        }
 
-            // start change obstacle
-            if (MappingFragment.changeObstacleStatus) {
-                if (!((1 <= initialColumn && initialColumn <= 20)
-                        && (1 <= initialRow && initialRow <= 20))) {
-                    return false;
-                } else if (ITEM_LIST.get(row - 1)[column - 1].equals("")
-                        && imageBearings.get(row - 1)[column - 1].equals("")) {
-                    return false;
-                } else {
+        // In drag mode, a tap rotates the selected obstacle clockwise. A drag
+        // continues through the existing drag/drop callback above.
+        if (MappingFragment.dragStatus && action == MotionEvent.ACTION_UP
+                    && !dragStarted
+                    && initialColumn >= 1 && initialColumn <= 20
+                    && initialRow >= 1 && initialRow <= 20
+                    && !imageBearings.get(initialRow - 1)[initialColumn - 1].isEmpty()) {
+                rotateObstacleAt(initialColumn - 1, initialRow - 1);
+                dragStarted = false;
+                return true;
+        }
+        if (MappingFragment.dragStatus && action == MotionEvent.ACTION_UP) {
+            dragStarted = false;
+            return true;
+        }
+
+            /* legacy bearing dialog removed: drag-mode taps now rotate clockwise
+               and use the same persistence/RPi update path. */
+            if (false) {
                     showLog("Enter change obstacle status");
                     String imageId = ITEM_LIST.get(row - 1)[column - 1];
                     String imageBearing = imageBearings.get(row - 1)[column - 1];
@@ -1083,8 +1161,8 @@ public class GridMap extends View {
                     window.setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 }
                 showLog("Exit change obstacle");
-            }
 
+        if (action == MotionEvent.ACTION_DOWN) {
             // change robot size and make sure its within the grid
             if (startCoordStatus) {
                 if (canDrawRobot) {
@@ -1136,10 +1214,6 @@ public class GridMap extends View {
                     e.printStackTrace();
                 }
                 updateRobotAxis(column, row, direction);
-                if (setStartPointToggleBtn.isChecked()) {
-                    setStartPointToggleBtn.toggle();
-                    setStartPointToggleBtn.setBackgroundResource(R.drawable.border_black);
-                }
                 this.invalidate();
                 return true;
             }
@@ -1214,17 +1288,8 @@ public class GridMap extends View {
     }
 
     public void toggleCheckedBtn(String buttonName) {
-        ToggleButton setStartPointToggleBtn = ((Activity) this.getContext())
-                .findViewById(R.id.startpointToggleBtn);
         ImageButton obstacleImageBtn = ((Activity) this.getContext())
                 .findViewById(R.id.addObstacleBtn);
-
-        if (!buttonName.equals("setStartPointToggleBtn"))
-            if (setStartPointToggleBtn.isChecked()) {
-                this.setStartCoordStatus(false);
-                setStartPointToggleBtn.toggle();
-                setStartPointToggleBtn.setBackgroundResource(R.drawable.border_black);
-            }
         if (!buttonName.equals("obstacleImageBtn"))
             if (obstacleImageBtn.isEnabled()) {
                 this.setSetObstacleStatus(false);
@@ -1260,6 +1325,7 @@ public class GridMap extends View {
                 imageBearings.get(i)[j] = "";
             }
         }
+        persistObstacleMap();
         showLog("Exiting resetMap");
         this.invalidate();
     }
@@ -2228,9 +2294,13 @@ public class GridMap extends View {
     public String saveObstacleList(){    // used for the save/load map functionality
         String message ="";
         for (int i = 0; i < obstacleCoord.size(); i++) {
+            int x = obstacleCoord.get(i)[0];
+            int y = obstacleCoord.get(i)[1];
+            String bearing = imageBearings.get(y)[x];
+            if (bearing == null || bearing.isEmpty()) continue;
             message += ((obstacleCoord.get(i)[0]) + "," // add x coordinate of obstacle
                     + (obstacleCoord.get(i)[1]) + ","   // add y coordinate of obstacle
-                    + imageBearings.get(obstacleCoord.get(i)[1])[obstacleCoord.get(i)[0]].charAt(0));  // add the 1st letter of the direction
+                    + bearing.charAt(0));  // add the 1st letter of the direction
 
 //            showLog("here"+imageBearings.get(obstacleCoord.get(i)[1])[obstacleCoord.get(i)[0]]);
 

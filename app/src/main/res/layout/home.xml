@@ -12,20 +12,20 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="431dp"
-            android:layout_marginTop="5dp"
+            android:layout_height="486dp"
+            android:layout_marginTop="3dp"
             android:orientation="horizontal">
 
             <LinearLayout
-                android:layout_width="430dp"
-                android:layout_height="430dp"
+                android:layout_width="480dp"
+                android:layout_height="480dp"
                 android:orientation="horizontal">
 
                 <view
                     android:id="@+id/mapView"
                     class="com.example.mdp_group_14.GridMap"
                     android:layout_width="match_parent"
-                    android:layout_height="430dp" />
+                    android:layout_height="480dp" />
 
                 <Switch
                     android:id="@+id/switch1"
@@ -37,7 +37,7 @@
 
             <LinearLayout
                 android:layout_width="150dp"
-                android:layout_height="380dp"
+                android:layout_height="450dp"
                 android:layout_marginStart="7dp"
                 android:gravity="center"
                 android:orientation="vertical">
@@ -225,7 +225,7 @@
 
                         android:id="@+id/tabs"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="42dp"
                         app:tabGravity="center"
                         app:tabIndicator="@drawable/selected_tab2"
                         app:tabIndicatorAnimationMode="elastic"

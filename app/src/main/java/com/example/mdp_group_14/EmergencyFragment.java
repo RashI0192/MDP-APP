@@ -107,6 +107,7 @@ public class EmergencyFragment extends DialogFragment {
     }
 
     private void refreshObstacleList() {
+        if (obstacleListContainer == null || gridMap == null) return;
         obstacleListContainer.removeAllViews();
         for (int i = 0; i < gridMap.getObstaclesList().size(); i++) {
             int[] obstacle = gridMap.getObstaclesList().get(i);
@@ -117,6 +118,16 @@ public class EmergencyFragment extends DialogFragment {
             row.setOnClickListener(v -> showObstacleEditor(index));
             obstacleListContainer.addView(row);
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // The map is shared with the MAP CONFIG tab. Rebuild this list every time
+        // the tab becomes visible so additions, moves, rotations, and deletions
+        // made on the grid are reflected immediately.
+        gridMap = Home.getGridMap();
+        refreshObstacleList();
     }
 
     private void showObstacleEditor(int index) {
