@@ -124,6 +124,8 @@ public class GridMap extends View {
     private float touchDownX;
     private float touchDownY;
     private boolean dragStarted;
+    private boolean tapRotationApplied;
+    private String dragOriginalBearing;
     private static final float DRAG_START_DISTANCE_PX = 28f;
     public Canvas canvas;
 
@@ -986,6 +988,8 @@ public class GridMap extends View {
             touchDownX = event.getX();
             touchDownY = event.getY();
             dragStarted = false;
+            tapRotationApplied = false;
+            dragOriginalBearing = "";
 
             showLog("event.getX = " + event.getX() + ", event.getY = " + event.getY());
             showLog("row = " + row + ", column = " + column);
@@ -1006,6 +1010,12 @@ public class GridMap extends View {
                         && imageBearings.get(row - 1)[column - 1].equals("")) {
                     return false;
                 }
+                // Apply rotation immediately. Android may consume ACTION_UP once
+                // a drag stream is active, so waiting for ACTION_UP makes taps
+                // unreliable on some emulator/device versions.
+                dragOriginalBearing = imageBearings.get(row - 1)[column - 1];
+                rotateObstacleAt(column - 1, row - 1);
+                tapRotationApplied = true;
             }
 
             // Keep the gesture alive so ACTION_MOVE/ACTION_UP can distinguish a tap
@@ -1022,6 +1032,23 @@ public class GridMap extends View {
             float dx = event.getX() - touchDownX;
             float dy = event.getY() - touchDownY;
             if ((dx * dx) + (dy * dy) >= DRAG_START_DISTANCE_PX * DRAG_START_DISTANCE_PX) {
+                if (tapRotationApplied && !dragOriginalBearing.isEmpty()) {
+                    imageBearings.get(initialRow - 1)[initialColumn - 1] = dragOriginalBearing;
+                    int originalIndex = -1;
+                    for (int i = 0; i < obstacleCoord.size(); i++) {
+                        if (obstacleCoord.get(i)[0] == initialColumn - 1
+                                && obstacleCoord.get(i)[1] == initialRow - 1) {
+                            originalIndex = i;
+                            break;
+                        }
+                    }
+                    if (originalIndex >= 0) {
+                        Home.printMessage("OBSTACLE," + obstacleIds.get(originalIndex) + ","
+                                + ((initialColumn - 1) * 10) + "," + ((initialRow - 1) * 10)
+                                + "," + dragOriginalBearing.toUpperCase() + "\n");
+                    }
+                    persistObstacleMap();
+                }
                 dragStarted = true;
                 View.DragShadowBuilder dragShadowBuilder = new MyDragShadowBuilder(this);
                 this.startDrag(null, dragShadowBuilder, null, 0);
@@ -1033,15 +1060,18 @@ public class GridMap extends View {
         // continues through the existing drag/drop callback above.
         if (MappingFragment.dragStatus && action == MotionEvent.ACTION_UP
                     && !dragStarted
+                    && !tapRotationApplied
                     && initialColumn >= 1 && initialColumn <= 20
                     && initialRow >= 1 && initialRow <= 20
                     && !imageBearings.get(initialRow - 1)[initialColumn - 1].isEmpty()) {
                 rotateObstacleAt(initialColumn - 1, initialRow - 1);
                 dragStarted = false;
+                tapRotationApplied = false;
                 return true;
         }
         if (MappingFragment.dragStatus && action == MotionEvent.ACTION_UP) {
             dragStarted = false;
+            tapRotationApplied = false;
             return true;
         }
 
