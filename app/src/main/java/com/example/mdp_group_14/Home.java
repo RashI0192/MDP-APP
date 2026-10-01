@@ -88,6 +88,8 @@ public class Home extends Fragment {
                              Bundle savedInstanceState) {
         // inflate
         View root = inflater.inflate(R.layout.home, container, false);
+        View statusPanel = root.findViewById(R.id.homeRobotStatusPanel);
+        registerStatusViews(root);
 
         // get shared preferences
         sharedPreferences = getActivity().getSharedPreferences("Shared Preferences",
@@ -112,6 +114,7 @@ public class Home extends Fragment {
             @Override
             public void onPageSelected(int position) {
                 configureMapConfigLayout(mapView, viewPager, position == 0);
+                statusPanel.setVisibility(position == 0 ? View.GONE : View.VISIBLE);
             }
         });
 
