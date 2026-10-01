@@ -177,13 +177,10 @@ public class Home extends Fragment {
      */
     private void configureMapConfigLayout(GridMap mapView, ViewPager viewPager, boolean mapConfigSelected) {
         LinearLayout.LayoutParams mapParams = (LinearLayout.LayoutParams) mapView.getLayoutParams();
-        LinearLayout.LayoutParams pagerParams = (LinearLayout.LayoutParams) viewPager.getLayoutParams();
 
         mapParams.weight = mapConfigSelected ? 1.45f : 1.0f;
-        pagerParams.weight = mapConfigSelected ? 0.55f : 1.0f;
 
         mapView.setLayoutParams(mapParams);
-        viewPager.setLayoutParams(pagerParams);
     }
 
     public static GridMap getGridMap() {

@@ -143,7 +143,14 @@ public class BluetoothSetUp extends Fragment {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         Switch bluetoothSwitch = root.findViewById(R.id.bluetoothSwitch);
-        if(mBluetoothAdapter.isEnabled()){
+        // Android emulators may not expose a Bluetooth adapter. This fragment is
+        // created eagerly by the ViewPager, so do not dereference a null adapter
+        // during app startup.
+        if (mBluetoothAdapter == null) {
+            bluetoothSwitch.setChecked(false);
+            bluetoothSwitch.setText("UNSUPPORTED");
+            bluetoothSwitch.setEnabled(false);
+        } else if(mBluetoothAdapter.isEnabled()){
             bluetoothSwitch.setChecked(true);
             bluetoothSwitch.setText("ON");
         }
@@ -259,6 +266,10 @@ public class BluetoothSetUp extends Fragment {
             @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT})
             public void onClick(View view) {
                 Log.d(TAG, "onClick: search button");
+                if (mBluetoothAdapter == null) {
+                    updateStatus("Bluetooth is not supported on this device");
+                    return;
+                }
                 toggleButtonScan(view);
             }
         });
@@ -270,6 +281,8 @@ public class BluetoothSetUp extends Fragment {
         sharedPreferences = getActivity().getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
         if (sharedPreferences.contains("connStatus"))
             connStatus = sharedPreferences.getString("connStatus", "");
+        if (mBluetoothAdapter == null)
+            connStatus = "Bluetooth not supported on this device";
 
         connStatusTextView.setText(connStatus);
 
