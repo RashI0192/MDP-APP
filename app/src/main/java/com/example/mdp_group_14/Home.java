@@ -32,6 +32,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 
 
 import com.google.android.material.tabs.TabLayout;
@@ -109,11 +110,13 @@ public class Home extends Fragment {
         viewPager.setOffscreenPageLimit(2);
 
         GridMap mapView = root.findViewById(R.id.mapView);
-        configureMapConfigLayout(mapView, viewPager, true);
+        LinearLayout mapArea = root.findViewById(R.id.map_area);
+        FrameLayout tabArea = root.findViewById(R.id.tab_area);
+        configureMapConfigLayout(mapArea, tabArea, true);
         viewPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
             public void onPageSelected(int position) {
-                configureMapConfigLayout(mapView, viewPager, position == 0);
+                configureMapConfigLayout(mapArea, tabArea, position == 0);
                 statusPanel.setVisibility(position == 0 ? View.GONE : View.VISIBLE);
             }
         });
@@ -175,12 +178,17 @@ public class Home extends Fragment {
      * Challenge proportions. GridMap recalculates its cell size from the new
      * measured dimensions, so taps and dragged obstacles stay aligned.
      */
-    private void configureMapConfigLayout(GridMap mapView, ViewPager viewPager, boolean mapConfigSelected) {
-        LinearLayout.LayoutParams mapParams = (LinearLayout.LayoutParams) mapView.getLayoutParams();
+    private void configureMapConfigLayout(LinearLayout mapArea, FrameLayout tabArea,
+                                          boolean mapConfigSelected) {
+        LinearLayout.LayoutParams mapParams = (LinearLayout.LayoutParams) mapArea.getLayoutParams();
+        LinearLayout.LayoutParams tabParams = (LinearLayout.LayoutParams) tabArea.getLayoutParams();
 
-        mapParams.weight = mapConfigSelected ? 1.45f : 1.0f;
+        // Map Config gets the extra vertical room. Chat and Challenge retain the original split.
+        mapParams.weight = mapConfigSelected ? 1.35f : 1.0f;
+        tabParams.weight = mapConfigSelected ? 0.65f : 1.0f;
 
-        mapView.setLayoutParams(mapParams);
+        mapArea.setLayoutParams(mapParams);
+        tabArea.setLayoutParams(tabParams);
     }
 
     public static GridMap getGridMap() {
