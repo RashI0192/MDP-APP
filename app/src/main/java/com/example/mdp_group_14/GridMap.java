@@ -251,14 +251,24 @@ public class GridMap extends View {
             );
 
             String bearing = imageBearings.get(row)[col];
-            whitePaint.setTextSize(15);
+            String targetId = ITEM_LIST.get(row)[col];
+            boolean hasTargetId = targetId != null
+                    && !targetId.isEmpty()
+                    && !targetId.equals("NA")
+                    && !targetId.equals("Nil");
+            whitePaint.setTextSize(hasTargetId ? 22 : 15);
+            whitePaint.setColor(hasTargetId ? Color.GREEN : Color.WHITE);
+            whitePaint.setTypeface(hasTargetId ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             canvas.drawText(
-                    String.valueOf(obstacleIds.get(i)),
+                    hasTargetId ? targetId : String.valueOf(obstacleIds.get(i)),
                     (obstacleCell.startX + obstacleCell.endX) / 2f,
                     (obstacleCell.startY + obstacleCell.endY) / 2f
                             - ((whitePaint.ascent() + whitePaint.descent()) / 2f),
                     whitePaint
             );
+            whitePaint.setColor(Color.WHITE);
+            whitePaint.setTextSize(15);
+            whitePaint.setTypeface(Typeface.DEFAULT);
 
             // color the face direction
             // imageBearings.get(row)[col], row and col are just zero-indexed based on the displayed grid (range is 0 - 19)
@@ -2419,8 +2429,13 @@ public class GridMap extends View {
     // Updating the obstacle image id (sent over by RPi)
     public boolean updateIDFromRpi(String obstacleID, String imageID) {
         showLog("updateIDFromRpi");
-        int x = obstacleCoord.get(Integer.parseInt(obstacleID))[0];
-        int y = obstacleCoord.get(Integer.parseInt(obstacleID))[1];
+        int obstacleIndex = Integer.parseInt(obstacleID);
+        if (obstacleIndex < 0 || obstacleIndex >= obstacleCoord.size()) {
+            showLog("Invalid RPi obstacle index: " + obstacleID);
+            return false;
+        }
+        int x = obstacleCoord.get(obstacleIndex)[0];
+        int y = obstacleCoord.get(obstacleIndex)[1];
         ITEM_LIST.get(y)[x] = (imageID.equals("-1")) ? "NA" : imageID;
         this.invalidate();
         return true;
