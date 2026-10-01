@@ -1,4 +1,5 @@
-### IGNOREEEE (random stuff here)
+# add role
+
 # MDP: Leclerc Pitwall Operations
 - Welcome to the paddock. If you are here, you are either looking for a championship trophy or wondering why our tires are square. This repository houses the codebase for our Formula 1-inspired autonomous racing machine. Think of us as the Charles Leclerc engineering crew, except instead of crying on the team radio, we are debugging segmentation faults while the engine is already on fire.
 
