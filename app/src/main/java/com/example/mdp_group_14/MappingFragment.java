@@ -72,7 +72,7 @@ public class MappingFragment extends Fragment {
                         .setTitle("Reset Map")
                         .setMessage("Are you sure you want to clear all obstacles?")
                         .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Clear", (dialog, which) -> { Home.printMessage("CLEAR"); gridMap.resetMap(); })
+                        .setPositiveButton("Clear", (dialog, which) -> gridMap.resetMap())
                         .show();
 
             }

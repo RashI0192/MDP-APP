@@ -32,7 +32,7 @@ public class ControlFragment extends Fragment {
 
     // Control Button
     ImageButton moveForwardImageBtn, turnRightImageBtn, moveBackImageBtn, turnLeftImageBtn,turnbleftImageBtn,turnbrightImageBtn;
-    ImageButton exploreResetButton, fastestResetButton;
+    ImageButton fastestResetButton;
     private static long exploreTimer, fastestTimer;
     public static ToggleButton exploreButton, fastestButton;
     public static TextView exploreTimeTextView, fastestTimeTextView, robotStatusTextView;
@@ -42,6 +42,7 @@ public class ControlFragment extends Fragment {
     public static Handler timerHandler = new Handler();
 
     Button sendObstaclesButton;
+    Button challengeResetButton;
     Button explorePauseButton, fastestPauseButton, practiceTasksButton;
     private long exploreElapsed, fastestElapsed, practiceStarted, practiceElapsed;
     private boolean explorePaused, fastestPaused, practiceRunning, practicePaused;
@@ -109,8 +110,8 @@ public class ControlFragment extends Fragment {
         exploreButton = root.findViewById(R.id.exploreToggleBtn2);
         sendObstaclesButton = root.findViewById(R.id.sendObstaclesButton);
         fastestButton = root.findViewById(R.id.fastestToggleBtn2);
-        exploreResetButton = root.findViewById(R.id.exploreResetImageBtn2);
         fastestResetButton = root.findViewById(R.id.fastestResetImageBtn2);
+        challengeResetButton = root.findViewById(R.id.challengeResetButton);
         explorePauseButton = root.findViewById(R.id.explorePauseBtn);
         fastestPauseButton = root.findViewById(R.id.fastestPauseBtn);
         practiceTasksButton = root.findViewById(R.id.practiceTasksBtn);
@@ -230,13 +231,24 @@ public class ControlFragment extends Fragment {
         // Obstacle setup is separate from BEGIN. Planning is asynchronous, so the user can
         // wait for STATUS:Ready before starting the run.
         sendObstaclesButton.setOnClickListener(view -> {
+            StringBuilder sentObstacles = new StringBuilder();
             for (String line : gridMap.getObstacleLines()) {
                 Home.printMessage(line);
-                showLog("Obstacle setup complete. line: " + line);
+                if (sentObstacles.length() > 0) sentObstacles.append("\n");
+                sentObstacles.append(line);
             }
             Home.printMessage("DONE");
+            if (sentObstacles.length() > 0) sentObstacles.append("\n");
+            sentObstacles.append("DONE");
+            Home.refreshMessageReceivedNS(sentObstacles.toString());
+            robotStatusTextView.setText("Obstacles sent");
+        });
 
-            robotStatusTextView.setText("Planning");
+        challengeResetButton.setOnClickListener(v -> {
+            Home.printMessage("RESET");
+            resetExploreTimer(false);
+            resetFastestTimer(false);
+            robotStatusTextView.setText("Reset sent");
         });
 
         // Start Task 1 challenge
@@ -335,21 +347,6 @@ public class ControlFragment extends Fragment {
 
         practiceTasksButton.setOnClickListener(v -> showPracticeTasks());
 
-        exploreResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showLog("Clicked exploreResetImageBtn");
-                showToast("Resetting exploration time...");
-                exploreTimeTextView.setText("00:00");
-                exploreElapsed = 0; explorePaused = false; explorePauseButton.setText("PAUSE");
-                robotStatusTextView.setText("Not Available");
-                if(exploreButton.isChecked())
-                    exploreButton.toggle();
-                timerHandler.removeCallbacks(timerRunnableExplore);
-                showLog("Exiting exploreResetImageBtn");
-            }
-        });
-
         fastestResetButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
@@ -399,6 +396,30 @@ public class ControlFragment extends Fragment {
          */
 
         return root;
+    }
+
+    private void resetExploreTimer(boolean updateStatus) {
+        exploreTimeTextView.setText("00:00");
+        exploreElapsed = 0;
+        exploreTimer = 0;
+        explorePaused = false;
+        explorePauseButton.setText("PAUSE");
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        if (exploreButton.isChecked()) exploreButton.toggle();
+        if (updateStatus) robotStatusTextView.setText("Not Available");
+    }
+
+    private void resetFastestTimer(boolean updateStatus) {
+        fastestTimeTextView.setText("00:00");
+        fastestElapsed = 0;
+        fastestTimer = 0;
+        fastestPaused = false;
+        fastestPauseButton.setText("PAUSE");
+        Home.stopWk9TimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableFastest);
+        if (fastestButton.isChecked()) fastestButton.toggle();
+        if (updateStatus) robotStatusTextView.setText("Fastest Car Finished");
     }
 
     private void showPracticeTasks() {
