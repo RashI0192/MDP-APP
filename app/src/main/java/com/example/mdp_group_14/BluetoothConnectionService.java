@@ -218,7 +218,18 @@ public class BluetoothConnectionService {
 
     public synchronized void startClientThread(BluetoothDevice device, UUID uuid) {
         Log.d(TAG, "startClientThread");
-        if (mConnectThread != null) mConnectThread.cancel();
+        if (BluetoothConnectionStatus) {
+            Log.d(TAG, "startClientThread: already connected; ignoring request");
+            return;
+        }
+        if (mConnectThread != null) {
+            Log.d(TAG, "startClientThread: connection attempt already in progress");
+            return;
+        }
+        if (mInsecureAcceptThread != null) {
+            mInsecureAcceptThread.cancel();
+            mInsecureAcceptThread = null;
+        }
         mConnectThread = new ConnectThread(device, uuid);
         mConnectThread.start();
     }
@@ -345,6 +356,11 @@ public class BluetoothConnectionService {
 
     private synchronized void connected(BluetoothSocket socket, BluetoothDevice device) {
         Log.d(TAG, "connected: Starting.");
+        if (BluetoothConnectionStatus && mConnectedThread != null) {
+            Log.d(TAG, "connected: closing duplicate socket; active connection is retained");
+            closeQuietly(socket);
+            return;
+        }
         if (mInsecureAcceptThread != null) {
             mInsecureAcceptThread.cancel();
             mInsecureAcceptThread = null;
