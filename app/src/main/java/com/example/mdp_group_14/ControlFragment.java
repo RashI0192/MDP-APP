@@ -29,6 +29,7 @@ import java.util.Arrays;
 
 public class ControlFragment extends Fragment {
     private static final String TAG = "ControlFragment";
+    private static ControlFragment activeInstance;
 
     SharedPreferences sharedPreferences;
 
@@ -126,9 +127,8 @@ public class ControlFragment extends Fragment {
         //startSend = root.findViewById(R.id.startSend); //just added, need to test
 
         gridMap = Home.getGridMap();
+        activeInstance = this;
 
-        // Drive buttons: pressing sends the direction command, releasing sends "STOP".
-        // The robot icon on the map is NOT moved by these buttons.
         attachPressRelease(moveForwardImageBtn, "f");
         attachPressRelease(moveBackImageBtn, "b");
         attachPressRelease(turnLeftImageBtn, "fl");
@@ -339,6 +339,12 @@ public class ControlFragment extends Fragment {
         if (updateStatus) robotStatusTextView.setText("Fastest Car Finished");
     }
 
+    public static void resetChallengeTimers() {
+        if (activeInstance == null) return;
+        activeInstance.resetExploreTimer(false);
+        activeInstance.resetFastestTimer(false);
+    }
+
     private void showPracticeTasks() {
         LinearLayout panel = new LinearLayout(requireContext());
         panel.setOrientation(LinearLayout.VERTICAL);
@@ -392,41 +398,36 @@ public class ControlFragment extends Fragment {
         super.onDestroy();
     }
 
-    // ---------------------------------------------------------------------------------
-    // Press = send direction, release = send "STOP" (map icon is left untouched)
-    // ---------------------------------------------------------------------------------
-    private View activeButton = null;   // button currently held down, if any
+    private View activeButton;
 
     @SuppressLint("ClickableViewAccessibility")
     private void attachPressRelease(ImageButton button, String command) {
-        button.setOnTouchListener((v, event) -> {
+        button.setOnTouchListener((view, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    if (activeButton != null) return true;   // ignore a 2nd button while one is down
-                    activeButton = v;
-                    v.setPressed(true);
+                    if (activeButton != null) return true;
+                    activeButton = view;
+                    view.setPressed(true);
                     Home.printMessage(command);
                     return true;
-
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (activeButton != v) return true;
-                    v.setPressed(false);
+                    if (activeButton != view) return true;
+                    view.setPressed(false);
                     activeButton = null;
                     Home.printMessage("STOP");
                     return true;
+                default:
+                    return true;
             }
-            return true;
         });
     }
 
-    /** Never leave the robot running if the tab/app goes away mid-press. */
     private void releaseActiveButton() {
-        if (activeButton != null) {
-            activeButton.setPressed(false);
-            activeButton = null;
-            Home.printMessage("STOP");
-        }
+        if (activeButton == null) return;
+        activeButton.setPressed(false);
+        activeButton = null;
+        Home.printMessage("STOP");
     }
 
     @Override

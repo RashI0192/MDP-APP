@@ -418,6 +418,9 @@ public class Home extends Fragment {
             if (message.startsWith("STATUS:")) {
                 String status = message.substring(7).trim();
                 robotReady = "Ready".equalsIgnoreCase(status);
+                if ("Finished".equalsIgnoreCase(status)) {
+                    ControlFragment.resetChallengeTimers();
+                }
                 if (robotStatusTextView != null) robotStatusTextView.setText(status);
                 return;
             }

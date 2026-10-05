@@ -79,11 +79,13 @@ public class BluetoothConnectionService {
     private final Runnable linkHealthRunnable = new Runnable() {
         @Override
         public void run() {
+            final ConnectedThread activeThread = mConnectedThread;
             final long lastSeen = lastSeenElapsedMs;
             final boolean linkOk = BluetoothConnectionStatus
+                    && activeThread != null
                     && lastSeen > 0L
                     && SystemClock.elapsedRealtime() - lastSeen < LINK_TIMEOUT_MS;
-            publishLinkHealth(linkOk);
+            publishLinkHealth(linkOk, activeThread, linkOk ? "inbound traffic" : "inbound timeout");
             mainHandler.postDelayed(this, LINK_HEALTH_CHECK_MS);
         }
     };
@@ -279,8 +281,13 @@ public class BluetoothConnectionService {
                     if (bytes == 0) {
                         continue;
                     }
-                    lastSeenElapsedMs = SystemClock.elapsedRealtime();
-                    publishLinkHealth(true);
+                    synchronized (BluetoothConnectionService.this) {
+                        if (mConnectedThread != this) {
+                            break;
+                        }
+                        lastSeenElapsedMs = SystemClock.elapsedRealtime();
+                    }
+                    publishLinkHealth(true, this, "inbound traffic");
                     handleIncoming(new String(buffer, 0, bytes, StandardCharsets.UTF_8));
                 } catch (IOException e) {
                     Log.e(TAG, "Error reading input stream. " + e.getMessage());
@@ -326,6 +333,7 @@ public class BluetoothConnectionService {
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error writing to output stream. " + e.getMessage());
+                onLost();
             }
         }
 
@@ -342,7 +350,7 @@ public class BluetoothConnectionService {
                 pending.setLength(0); // an unfinished line belongs to the lost connection
             }
             lastSeenElapsedMs = 0L;
-            publishLinkHealth(false);
+            publishLinkHealth(false, this, "socket lost");
             broadcastConnection("disconnected", device);
             updateStatusViews(false, null);
             scheduleAcceptRetry();
@@ -373,7 +381,7 @@ public class BluetoothConnectionService {
         mConnectedThread = thread;
         BluetoothConnectionStatus = true;
         lastSeenElapsedMs = SystemClock.elapsedRealtime();
-        publishLinkHealth(true);
+        publishLinkHealth(true, thread, "socket connected");
         thread.start();
     }
 
@@ -397,15 +405,21 @@ public class BluetoothConnectionService {
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
     }
 
-    private synchronized void publishLinkHealth(boolean linkOk) {
+    private synchronized void publishLinkHealth(boolean linkOk, ConnectedThread source, String reason) {
+        if (source != null && mConnectedThread != source) {
+            Log.d(TAG, "Ignoring stale link health update: " + reason);
+            return;
+        }
         if (linkHealthPublished && BluetoothLinkOk == linkOk) {
             return;
         }
         linkHealthPublished = true;
         BluetoothLinkOk = linkOk;
+        Log.i(TAG, "Bluetooth link " + (linkOk ? "UP" : "DOWN") + ": " + reason);
         Intent linkStatus = new Intent("BluetoothLinkStatus");
         linkStatus.putExtra("link_ok", linkOk);
         linkStatus.putExtra("last_seen_elapsed_ms", lastSeenElapsedMs);
+        linkStatus.putExtra("reason", reason);
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(linkStatus);
     }
 

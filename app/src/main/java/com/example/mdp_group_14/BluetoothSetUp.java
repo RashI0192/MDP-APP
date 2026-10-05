@@ -33,6 +33,7 @@ import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.viewpager.widget.ViewPager;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -292,10 +293,10 @@ public class BluetoothSetUp extends Fragment {
                 editor = sharedPreferences.edit();
                 editor.putString("connStatus", connStatusTextView.getText().toString());
                 editor.commit();
-                TextView status = Home.getBluetoothStatus();
-                String s = connStatusTextView.getText().toString();
-                //status.setText(s);
-                getActivity().finish();
+                ViewPager viewPager = requireActivity().findViewById(R.id.view_pager2);
+                if (viewPager != null) {
+                    viewPager.setCurrentItem(0, false);
+                }
             }
         });
 
