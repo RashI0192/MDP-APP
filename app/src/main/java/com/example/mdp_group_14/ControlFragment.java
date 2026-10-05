@@ -2,6 +2,7 @@ package com.example.mdp_group_14;
 
 import static com.example.mdp_group_14.Home.refreshMessageReceivedNS;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -9,6 +10,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -125,110 +127,14 @@ public class ControlFragment extends Fragment {
 
         gridMap = Home.getGridMap();
 
-        // Button Listener
-        moveForwardImageBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked moveForwardImageBtn");
-                if (gridMap.getCanDrawRobot()) {
-                    gridMap.moveRobot("forward");
-                    Home.refreshLabel();    // update x and y coordinate displayed
-                    // display different statuses depending on validity of robot action
-                    if (gridMap.getValidPosition()){
-                        updateStatus("moving forward");}
-                    else {
-                        updateStatus("Unable to move forward");
-                    }
-
-                    Home.printMessage("f");
-                }
-                else
-                    updateStatus("Please press 'SET START POINT'");
-                showLog("Exiting moveForwardImageBtn");
-            }
-        });
-
-        turnRightImageBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked turnRightImageBtn");
-                if (gridMap.getCanDrawRobot()) {
-                    gridMap.moveRobot("right");
-                    Home.refreshLabel();
-                    Home.printMessage("fr");
-//                    showLog("test");
-                    System.out.println(Arrays.toString(gridMap.getCurCoord()));
-                }
-                else
-                    updateStatus("Please press 'SET START POINT'");
-                showLog("Exiting turnRightImageBtn");
-            }
-        });
-        turnbrightImageBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked turnbRightImageBtn");
-                if (gridMap.getCanDrawRobot()) {
-                    gridMap.moveRobot("backright");
-                    Home.refreshLabel();
-                    Home.printMessage("br");
-                    System.out.println(Arrays.toString(gridMap.getCurCoord()));
-                }
-                else
-                    updateStatus("Please press 'SET START POINT'");
-                showLog("Exiting turnbRightImageBtn");
-            }
-        });
-
-        moveBackImageBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked moveBackwardImageBtn");
-                if (gridMap.getCanDrawRobot()) {
-                    gridMap.moveRobot("back");
-                    Home.refreshLabel();
-                    if (gridMap.getValidPosition())
-                        updateStatus("moving backward");
-                    else
-                        updateStatus("Unable to move backward");
-                    Home.printMessage("b");
-                }
-                else
-                    updateStatus("Please press 'SET START POINT'");
-                showLog("Exiting moveBackwardImageBtn");
-            }
-        });
-
-        turnLeftImageBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked turnLeftImageBtn");
-                if (gridMap.getCanDrawRobot()) {
-                    gridMap.moveRobot("left");
-                    Home.refreshLabel();
-                    updateStatus("turning left");
-                    Home.printMessage("fl");
-                }
-                else
-                    updateStatus("Please press 'SET START POINT'");
-                showLog("Exiting turnLeftImageBtn");
-            }
-        });
-        turnbleftImageBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked turnbLeftImageBtn");
-                if (gridMap.getCanDrawRobot()) {
-                    gridMap.moveRobot("backleft");
-                    Home.refreshLabel();
-                    updateStatus("turning left");
-                    Home.printMessage("bl");
-                }
-                else
-                    updateStatus("Please press 'SET START POINT'");
-                showLog("Exiting turnbLeftImageBtn");
-            }
-        });
+        // Drive buttons: pressing sends the direction command, releasing sends "STOP".
+        // The robot icon on the map is NOT moved by these buttons.
+        attachPressRelease(moveForwardImageBtn, "f");
+        attachPressRelease(moveBackImageBtn, "b");
+        attachPressRelease(turnLeftImageBtn, "fl");
+        attachPressRelease(turnRightImageBtn, "fr");
+        attachPressRelease(turnbleftImageBtn, "bl");
+        attachPressRelease(turnbrightImageBtn, "br");
 
         // Obstacle setup is separate from BEGIN. Planning is asynchronous, so the user can
         // wait for STATUS:Ready before starting the run.
@@ -484,6 +390,55 @@ public class ControlFragment extends Fragment {
     @Override
     public void onDestroy(){
         super.onDestroy();
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Press = send direction, release = send "STOP" (map icon is left untouched)
+    // ---------------------------------------------------------------------------------
+    private View activeButton = null;   // button currently held down, if any
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void attachPressRelease(ImageButton button, String command) {
+        button.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    if (activeButton != null) return true;   // ignore a 2nd button while one is down
+                    activeButton = v;
+                    v.setPressed(true);
+                    Home.printMessage(command);
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (activeButton != v) return true;
+                    v.setPressed(false);
+                    activeButton = null;
+                    Home.printMessage("STOP");
+                    return true;
+            }
+            return true;
+        });
+    }
+
+    /** Never leave the robot running if the tab/app goes away mid-press. */
+    private void releaseActiveButton() {
+        if (activeButton != null) {
+            activeButton.setPressed(false);
+            activeButton = null;
+            Home.printMessage("STOP");
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        releaseActiveButton();
+    }
+
+    @Override
+    public void onDestroyView() {
+        releaseActiveButton();
+        super.onDestroyView();
     }
 
     private void updateStatus(String message) {
