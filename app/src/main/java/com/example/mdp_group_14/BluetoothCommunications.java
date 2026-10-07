@@ -28,6 +28,12 @@ public class BluetoothCommunications extends Fragment {
     private EditText typeBoxEditText;
 
     public static void updateMessageLog(Context context, String message) {
+        SharedPreferences prefs = context.getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
+        String previous = prefs.getString("message", "");
+        String next = previous + (previous.isEmpty() ? "" : "\n") + message;
+        // Bound diagnostic storage so a day-long run cannot exhaust preferences.
+        if (next.length() > 32768) next = next.substring(next.length() - 32768);
+        prefs.edit().putString("message", next).apply();
         Intent intent = new Intent("uiMessage");
         intent.putExtra("receivedMessage", message);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
@@ -66,14 +72,18 @@ public class BluetoothCommunications extends Fragment {
         // get shared preferences
         sharedPreferences = requireActivity().getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
 
+        String savedMessage = sharedPreferences.getString("message", "");
+        if (!savedMessage.isEmpty()) {
+            messageReceivedTextView.setText(savedMessage);
+            messageReceivedTextView.post(() ->
+                    messageReceivedTextView.scrollTo(0, messageReceivedTextView.getBottom()));
+        }
+
         send.setOnClickListener(view -> {
             showLog("Clicked sendTextBtn");
             String sentText = typeBoxEditText.getText().toString();
 
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putString("message", sharedPreferences.getString("message", "") + '\n' + sentText);
-            editor.apply();
-            messageReceivedTextView.append(sentText + "\n");
+            updateMessageLog(requireContext(), sentText);
             typeBoxEditText.setText("");
 
             Home.printMessage(sentText);

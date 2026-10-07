@@ -60,7 +60,7 @@ public class BluetoothConnectionService {
     private final Context mContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private AcceptThread mInsecureAcceptThread;
+    private AcceptThread mAcceptThread;
     private ConnectThread mConnectThread;
     private volatile ConnectedThread mConnectedThread;
 
@@ -106,8 +106,9 @@ public class BluetoothConnectionService {
             BluetoothServerSocket tmp = null;
             try {
                 if (mBluetoothAdapter != null) {
-                    tmp = mBluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord(APP_NAME, MY_UUID);
-                    Log.d(TAG, "Accept Thread: Setting up Server using: " + MY_UUID);
+                    // Secure RFCOMM authenticates and encrypts the already-bonded peer.
+                    tmp = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(APP_NAME, MY_UUID);
+                    Log.d(TAG, "Accept Thread: Setting up secure RFCOMM server using: " + MY_UUID);
                 }
             } catch (IOException | SecurityException e) {
                 // SecurityException = BLUETOOTH_CONNECT not granted yet. We retry every second,
@@ -174,7 +175,8 @@ public class BluetoothConnectionService {
         @Override
         public void run() {
             try {
-                socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+                // Secure RFCOMM requires the paired/bonded peer and negotiates encryption.
+                socket = device.createRfcommSocketToServiceRecord(uuid);
                 if (mBluetoothAdapter != null) mBluetoothAdapter.cancelDiscovery();
                 socket.connect();
                 Log.d(TAG, "RUN: ConnectThread connected.");
@@ -199,17 +201,17 @@ public class BluetoothConnectionService {
     public synchronized void startAcceptThread() {
         Log.d(TAG, "startAcceptThread");
         if (BluetoothConnectionStatus) return;      // already connected, nothing to listen for
-        if (mInsecureAcceptThread == null || !mInsecureAcceptThread.isAlive()) {
-            mInsecureAcceptThread = new AcceptThread();
-            mInsecureAcceptThread.start();
+        if (mAcceptThread == null || !mAcceptThread.isAlive()) {
+            mAcceptThread = new AcceptThread();
+            mAcceptThread.start();
         }
     }
 
     private synchronized void acceptThreadFinished(AcceptThread finishedThread) {
-        if (mInsecureAcceptThread != finishedThread) {
+        if (mAcceptThread != finishedThread) {
             return;     // connected() already replaced/cleared it
         }
-        mInsecureAcceptThread = null;
+        mAcceptThread = null;
         if (!BluetoothConnectionStatus) {
             Log.d(TAG, "AcceptThread ended; retrying listener in " + ACCEPT_RETRY_MS + " ms");
             scheduleAcceptRetry();
@@ -345,9 +347,9 @@ public class BluetoothConnectionService {
 
     private synchronized void connected(BluetoothSocket socket, BluetoothDevice device) {
         Log.d(TAG, "connected: Starting.");
-        if (mInsecureAcceptThread != null) {
-            mInsecureAcceptThread.cancel();
-            mInsecureAcceptThread = null;
+        if (mAcceptThread != null) {
+            mAcceptThread.cancel();
+            mAcceptThread = null;
         }
         if (mConnectedThread != null) {
             mConnectedThread.cancel();

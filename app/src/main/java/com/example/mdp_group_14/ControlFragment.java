@@ -45,8 +45,11 @@ public class ControlFragment extends Fragment {
     Button challengeResetButton;
     Button startRpiRunButton;
     Button explorePauseButton, fastestPauseButton, practiceTasksButton;
-    private long exploreElapsed, fastestElapsed, practiceStarted, practiceElapsed;
-    private boolean explorePaused, fastestPaused, practiceRunning, practicePaused;
+    Button startTaskButton, pauseTaskButton, stopTaskButton;
+    private static long exploreElapsed, fastestElapsed;
+    private long practiceStarted, practiceElapsed;
+    private static boolean explorePaused, fastestPaused;
+    private boolean practiceRunning, practicePaused;
     private Handler practiceHandler = new Handler();
     private TextView practiceTimerView;
     private LinearLayout practiceLapseList;
@@ -114,13 +117,15 @@ public class ControlFragment extends Fragment {
         fastestResetButton = root.findViewById(R.id.fastestResetImageBtn2);
         challengeResetButton = root.findViewById(R.id.challengeResetButton);
         startRpiRunButton = root.findViewById(R.id.startRpiRunButton);
-        explorePauseButton = root.findViewById(R.id.explorePauseBtn);
+        explorePauseButton = root.findViewById(R.id.pauseTaskButton);
         fastestPauseButton = root.findViewById(R.id.fastestPauseBtn);
         practiceTasksButton = root.findViewById(R.id.practiceTasksBtn);
+        startTaskButton = root.findViewById(R.id.startTaskButton);
+        pauseTaskButton = root.findViewById(R.id.pauseTaskButton);
+        stopTaskButton = root.findViewById(R.id.stopTaskButton);
         robotStatusTextView = Home.getRobotStatusTextView();
-        fastestTimer = 0;
-        exploreTimer = 0;
-        exploreElapsed = fastestElapsed = 0;
+        // Timer fields are static so a configuration change does not reset an active run.
+        // They are initialized to zero automatically on a fresh process.
         //startSend = root.findViewById(R.id.startSend); //just added, need to test
 
         gridMap = Home.getGridMap();
@@ -312,6 +317,10 @@ public class ControlFragment extends Fragment {
             explorePaused = !explorePaused;
         });
 
+        startTaskButton.setOnClickListener(v -> startTaskTimer());
+        pauseTaskButton.setOnClickListener(v -> explorePauseButton.performClick());
+        stopTaskButton.setOnClickListener(v -> stopTaskTimer());
+
 
         //Start Task 2 Challenge Timer
         fastestButton.setOnClickListener(new View.OnClickListener() {
@@ -419,6 +428,49 @@ public class ControlFragment extends Fragment {
         timerHandler.removeCallbacks(timerRunnableExplore);
         if (exploreButton.isChecked()) exploreButton.toggle();
         if (updateStatus) robotStatusTextView.setText("Not Available");
+    }
+
+    private void startTaskTimer() {
+        Home.printMessage("BEGIN");
+        Home.stopTimerFlag = false;
+        exploreTimer = System.currentTimeMillis() - exploreElapsed;
+        explorePaused = false;
+        explorePauseButton.setText("PAUSE");
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        timerHandler.post(timerRunnableExplore);
+        robotStatusTextView.setText("Task Started");
+    }
+
+    private void stopTaskTimer() {
+        if (!Home.stopTimerFlag && exploreTimer != 0) {
+            exploreElapsed = System.currentTimeMillis() - exploreTimer;
+        }
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        robotStatusTextView.setText("Task Stopped");
+        Home.printMessage("STOP");
+    }
+
+    /** Timer controlled by the RPi STATUS/START/STOP protocol messages. */
+    public static void startRpiTimer() {
+        if (exploreTimeTextView == null) return;
+        if (!Home.stopTimerFlag && exploreTimer != 0) return;
+        Home.stopTimerFlag = false;
+        exploreTimer = System.currentTimeMillis();
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        timerHandler.post(timerRunnableExplore);
+    }
+
+    public static void stopRpiTimer() {
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+    }
+
+    public static void resetRpiTimer() {
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        exploreTimer = 0;
+        if (exploreTimeTextView != null) exploreTimeTextView.setText("00:00");
     }
 
     private void resetFastestTimer(boolean updateStatus) {

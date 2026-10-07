@@ -59,6 +59,7 @@ public class Home extends Fragment {
     private static GridMap gridMap;
     static TextView xAxisTextView, yAxisTextView, directionAxisTextView;
     static TextView robotStatusTextView, bluetoothStatus, bluetoothDevice;
+    static TextView planStatusTextView, resetStatusTextView;
     static ImageButton upBtn, downBtn, leftBtn, rightBtn,bleftBtn,brightBtn;
 
     BluetoothDevice mBTDevice;
@@ -134,16 +135,24 @@ public class Home extends Fragment {
         // Set up sharedPreferences
         Home.context = getContext();
         sharedPreferences();
-        editor.putString("message", "");
-        editor.putString("direction","None");
-
-
-        editor.putString("connStatus", "Disconnected");
+        // Preserve state across configuration changes. Clearing these values here made
+        // a simple rotation look like the Bluetooth session and chat had failed.
+        if (!sharedPreferences.contains("direction")) editor.putString("direction", "None");
+        if (!sharedPreferences.contains("connStatus")) editor.putString("connStatus", "Disconnected");
 
         editor.commit();
 
         // Map
         gridMap = mapView;
+        if (robotStatusTextView != null) {
+            robotStatusTextView.setText(sharedPreferences.getString("robotStatus", "Ready to Start"));
+        }
+        if (planStatusTextView != null) {
+            planStatusTextView.setText(sharedPreferences.getString("planStatus", "WAITING"));
+        }
+        if (resetStatusTextView != null) {
+            resetStatusTextView.setText(sharedPreferences.getString("resetStatus", "WAITING"));
+        }
 
         // initialize ITEM_LIST and imageBearings strings
         for (int i = 0; i < 20; i++) {
@@ -201,6 +210,8 @@ public class Home extends Fragment {
         bluetoothStatus = root.findViewById(R.id.bluetoothStatus);
         bluetoothDevice = root.findViewById(R.id.bluetoothConnectedDevice);
         robotStatusTextView = root.findViewById(R.id.robotStatus);
+        planStatusTextView = root.findViewById(R.id.planStatus);
+        resetStatusTextView = root.findViewById(R.id.resetStatus);
         xAxisTextView = root.findViewById(R.id.xAxisTextView);
         yAxisTextView = root.findViewById(R.id.yAxisTextView);
         directionAxisTextView = root.findViewById(R.id.directionAxisTextView);
@@ -419,6 +430,13 @@ public class Home extends Fragment {
                 String status = message.substring(7).trim();
                 robotReady = "Ready".equalsIgnoreCase(status);
                 if (robotStatusTextView != null) robotStatusTextView.setText(status);
+                sharedPreferences.edit().putString("robotStatus", status).apply();
+                if (isRunActiveStatus(status)) {
+                    ControlFragment.startRpiTimer();
+                } else if ("Finished".equalsIgnoreCase(status)
+                        || "Stopped".equalsIgnoreCase(status)) {
+                    ControlFragment.stopRpiTimer();
+                }
                 return;
             }
             //ROBOT,<x>,<y>,<N|E|S|W> from bluetooth_bridge_node.cpp / task1_runner.py
@@ -512,20 +530,31 @@ public class Home extends Fragment {
 
             //PLAN:<WAITING|PLANNING|DONE> from task1_runner.py
             else if(message.startsWith("PLAN:")) {
-                Home.refreshMessageReceivedNS("PLAN: " + message.substring(5).trim());
+                String state = message.substring(5).trim();
+                if (planStatusTextView != null) planStatusTextView.setText(state);
+                sharedPreferences.edit().putString("planStatus", state).apply();
+                Home.refreshMessageReceivedNS("PLAN: " + state);
             }
             //RESET:<WAITING|DONE> from task1_runner.py
             else if(message.startsWith("RESET:")) {
-                Home.refreshMessageReceivedNS("RESET: " + message.substring(6).trim());
+                String state = message.substring(6).trim();
+                if (resetStatusTextView != null) resetStatusTextView.setText(state);
+                sharedPreferences.edit().putString("resetStatus", state).apply();
+                Home.refreshMessageReceivedNS("RESET: " + state);
             }
-            else if(message.contains("STOP"))
+            else if (message.equalsIgnoreCase("START") || message.equalsIgnoreCase("BEGIN")) {
+                ControlFragment.startRpiTimer();
+                if (robotStatusTextView != null) robotStatusTextView.setText("Going");
+            }
+            else if(message.equalsIgnoreCase("STOP"))
             {
                 Home.refreshMessageReceivedNS("STOP received");
-//                showLog("received Stop");
-                Home.stopTimerFlag = true;
-                Home.stopWk9TimerFlag=true;
-                timerHandler.removeCallbacks(ControlFragment.timerRunnableExplore);
-                timerHandler.removeCallbacks(ControlFragment.timerRunnableFastest);
+                ControlFragment.stopRpiTimer();
+                if (robotStatusTextView != null) robotStatusTextView.setText("Stopped");
+            }
+            else if (message.equalsIgnoreCase("RESET")) {
+                ControlFragment.resetRpiTimer();
+                if (robotStatusTextView != null) robotStatusTextView.setText("Reset");
             }
             else{
                 BluetoothCommunications.updateMessageLog(context, "unknown message received");
@@ -545,6 +574,11 @@ public class Home extends Fragment {
                     myUUID = (UUID) data.getSerializableExtra("myUUID");
                 }
         }
+    }
+
+    private static boolean isRunActiveStatus(String status) {
+        String value = status.toLowerCase(java.util.Locale.ROOT);
+        return value.startsWith("going") || value.startsWith("scanning");
     }
 
     @Override
