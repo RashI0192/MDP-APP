@@ -23,6 +23,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -468,6 +469,9 @@ public class GridMap extends View {
 
     public void setSetObstacleStatus(boolean status) {
         setObstacleStatus = status;
+        if (status) {
+            deleteObstacleStatus = false;
+        }
     }
 
     public boolean getSetObstacleStatus() {
@@ -1325,6 +1329,7 @@ public class GridMap extends View {
                     if (obstacleCoord.get(i)[0] == column - 1 && obstacleCoord.get(i)[1] == row - 1) {
                         obstacleCoord.remove(i);
                         obstacleIds.remove(i);
+                        manualObstacleAnchors.remove((column - 1) + "," + (row - 1));
                         ITEM_LIST.get(row - 1)[column - 1] = "";
                         imageBearings.get(row - 1)[column - 1] = "";
                         // Clear the rendered cell as well as the obstacle data.
@@ -1364,13 +1369,22 @@ public class GridMap extends View {
     }
 
     public void toggleCheckedBtn(String buttonName) {
-        ImageButton obstacleImageBtn = ((Activity) this.getContext())
-                .findViewById(R.id.addObstacleBtn);
-        if (!buttonName.equals("obstacleImageBtn"))
-            if (obstacleImageBtn.isEnabled()) {
+        try {
+            ImageButton obstacleImageBtn = ((Activity) this.getContext())
+                    .findViewById(R.id.addObstacleBtn);
+            if (!buttonName.equals("obstacleImageBtn") && obstacleImageBtn != null) {
                 this.setSetObstacleStatus(false);
                 obstacleImageBtn.setBackgroundResource(R.drawable.border_black);
             }
+            Button deleteObstacleBtn = ((Activity) this.getContext())
+                    .findViewById(R.id.deleteObstacleBtn);
+            if (!buttonName.equals("deleteObstacleBtn") && deleteObstacleBtn != null) {
+                this.setDeleteObstacleStatus(false);
+                deleteObstacleBtn.setText("DELETE OBSTACLE");
+            }
+        } catch (Exception e) {
+            showLog("toggleCheckedBtn exception: " + e.getMessage());
+        }
     }
 
 
@@ -1383,6 +1397,8 @@ public class GridMap extends View {
 
 
         this.toggleCheckedBtn("None");
+        setObstacleStatus = false;
+        deleteObstacleStatus = false;
 
         startCoord = new int[]{-1, -1};
         curCoord = new int[]{-1, -1};
@@ -1406,7 +1422,12 @@ public class GridMap extends View {
         this.invalidate();
     }
 
-    public void setDeleteObstacleStatus(boolean status) { deleteObstacleStatus = status; }
+    public void setDeleteObstacleStatus(boolean status) {
+        deleteObstacleStatus = status;
+        if (status) {
+            setObstacleStatus = false;
+        }
+    }
     public boolean getDeleteObstacleStatus() { return deleteObstacleStatus; }
 
     private int nextObstacleId() {

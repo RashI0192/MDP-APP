@@ -62,6 +62,12 @@ public class MappingFragment extends Fragment {
         obstacleImageBtn = root.findViewById(R.id.addObstacleBtn);
 //        updateButton = root.findViewById(R.id.updateMapBtn);
         dragSwitch = root.findViewById(R.id.dragSwitch);
+
+        // Sync initial UI with gridMap state
+        deleteObstacleBtn.setText(gridMap.getDeleteObstacleStatus() ? "Tap obstacle to delete" : "DELETE OBSTACLE");
+        obstacleImageBtn.setBackgroundResource(gridMap.getSetObstacleStatus() ? R.drawable.border_black_pressed : R.drawable.border_black);
+        dragSwitch.setChecked(dragStatus);
+
         resetMapBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -70,15 +76,29 @@ public class MappingFragment extends Fragment {
                         .setTitle("Reset Map")
                         .setMessage("Are you sure you want to clear all obstacles?")
                         .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Clear", (dialog, which) -> gridMap.resetMap())
+                        .setPositiveButton("Clear", (dialog, which) -> {
+                            gridMap.resetMap();
+                            resetEditModes();
+                        })
                         .show();
 
             }
         });
 
         deleteObstacleBtn.setOnClickListener(v -> {
-            gridMap.setDeleteObstacleStatus(!gridMap.getDeleteObstacleStatus());
-            deleteObstacleBtn.setText(gridMap.getDeleteObstacleStatus() ? "Tap obstacle to delete" : "Delete Obstacle");
+            boolean nextState = !gridMap.getDeleteObstacleStatus();
+            gridMap.setDeleteObstacleStatus(nextState);
+            deleteObstacleBtn.setText(nextState ? "Tap obstacle to delete" : "DELETE OBSTACLE");
+
+            if (nextState) {
+                // Mutually exclusive: turn off Add Obstacle and Drag
+                gridMap.setSetObstacleStatus(false);
+                obstacleImageBtn.setBackgroundResource(R.drawable.border_black);
+                if (dragSwitch.isChecked()) {
+                    dragSwitch.setChecked(false);
+                }
+                dragStatus = false;
+            }
         });
 
         // switch for dragging
@@ -88,7 +108,11 @@ public class MappingFragment extends Fragment {
                 showToast("Dragging is " + (isChecked ? "on" : "off"));
                 dragStatus = isChecked;
                 if (dragStatus) {
+                    // Mutually exclusive: turn off Add Obstacle and Delete Obstacle
                     gridMap.setSetObstacleStatus(false);
+                    obstacleImageBtn.setBackgroundResource(R.drawable.border_black);
+                    gridMap.setDeleteObstacleStatus(false);
+                    deleteObstacleBtn.setText("DELETE OBSTACLE");
                 }
             }
         });
@@ -181,13 +205,17 @@ public class MappingFragment extends Fragment {
                     gridMap.setSetObstacleStatus(true);
                     gridMap.toggleCheckedBtn("obstacleImageBtn");
                     obstacleImageBtn.setBackgroundResource(R.drawable.border_black_pressed);
+
+                    // Mutually exclusive: turn off Delete Obstacle and Drag
+                    gridMap.setDeleteObstacleStatus(false);
+                    deleteObstacleBtn.setText("DELETE OBSTACLE");
+                    dragSwitch.setChecked(false);
+                    dragStatus = false;
                 }
                 else if (gridMap.getSetObstacleStatus()) {  // if setObstacleStatus is true
                     gridMap.setSetObstacleStatus(false);
                     obstacleImageBtn.setBackgroundResource(R.drawable.border_black);
                 }
-                // disable the other on touch functions
-                dragSwitch.setChecked(false);
                 showLog("obstacle status = " + gridMap.getSetObstacleStatus());
                 showLog("Exiting obstacleImageBtn");
             }
@@ -215,6 +243,23 @@ public class MappingFragment extends Fragment {
 //            }
 //        });
         return root;
+    }
+
+    private void resetEditModes() {
+        if (gridMap != null) {
+            gridMap.setSetObstacleStatus(false);
+            gridMap.setDeleteObstacleStatus(false);
+        }
+        if (obstacleImageBtn != null) {
+            obstacleImageBtn.setBackgroundResource(R.drawable.border_black);
+        }
+        if (deleteObstacleBtn != null) {
+            deleteObstacleBtn.setText("DELETE OBSTACLE");
+        }
+        if (dragSwitch != null) {
+            dragSwitch.setChecked(false);
+        }
+        dragStatus = false;
     }
 
     private void showLog(String message) {
