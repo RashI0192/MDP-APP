@@ -22,9 +22,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.ListView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,6 +31,7 @@ import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.viewpager.widget.ViewPager;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -142,19 +141,6 @@ public class BluetoothSetUp extends Fragment {
         // Get bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        Switch bluetoothSwitch = root.findViewById(R.id.bluetoothSwitch);
-        // Android emulators may not expose a Bluetooth adapter. This fragment is
-        // created eagerly by the ViewPager, so do not dereference a null adapter
-        // during app startup.
-        if (mBluetoothAdapter == null) {
-            bluetoothSwitch.setChecked(false);
-            bluetoothSwitch.setText("UNSUPPORTED");
-            bluetoothSwitch.setEnabled(false);
-        } else if(mBluetoothAdapter.isEnabled()){
-            bluetoothSwitch.setChecked(true);
-            bluetoothSwitch.setText("ON");
-        }
-
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         getActivity().registerReceiver(mBroadcastReceiver4, filter);
 
@@ -167,11 +153,15 @@ public class BluetoothSetUp extends Fragment {
             @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT})
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                mBluetoothAdapter.cancelDiscovery();
+                if (!canUseBluetooth()) return;
+                cancelDiscoverySafely();
+                if (i < 0 || i >= mNewBTDevices.size()) return;
                 lvPairedDevices.setAdapter(mPairedDeviceListAdapter);
 
-                String deviceName = mNewBTDevices.get(i).getName();
-                String deviceAddress = mNewBTDevices.get(i).getAddress();
+                BluetoothDevice selectedDevice = mNewBTDevices.get(i);
+                if (selectedDevice == null) return;
+                String deviceName = safeDeviceName(selectedDevice);
+                String deviceAddress = safeDeviceAddress(selectedDevice);
                 Log.d(TAG, "onItemClick: A device is selected.");
                 Log.d(TAG, "onItemClick: DEVICE NAME: " + deviceName);
                 Log.d(TAG, "onItemClick: DEVICE ADDRESS: " + deviceAddress);
@@ -179,10 +169,10 @@ public class BluetoothSetUp extends Fragment {
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2) {
                     Log.d(TAG, "onItemClick: Initiating pairing with " + deviceName);
 //                    mNewBTDevices.get(i).createBond();
-                    mBTDevice = mNewBTDevices.get(i);
+                    mBTDevice = selectedDevice;
                     updateStatus("Pair this device in Android Settings first, then pick it from the paired list");
                     mBluetoothConnection = BluetoothConnectionService.getInstance(requireContext());
-                    mBTDevice = mNewBTDevices.get(i);
+                    mBTDevice = selectedDevice;
                 }
             }
         });
@@ -191,61 +181,21 @@ public class BluetoothSetUp extends Fragment {
             @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT})
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                mBluetoothAdapter.cancelDiscovery();
+                if (!canUseBluetooth()) return;
+                cancelDiscoverySafely();
+                if (i < 0 || i >= mPairedBTDevices.size()) return;
                 lvNewDevices.setAdapter(mNewDeviceListAdapter);
 
-                String deviceName = mPairedBTDevices.get(i).getName();
-                String deviceAddress = mPairedBTDevices.get(i).getAddress();
+                BluetoothDevice selectedDevice = mPairedBTDevices.get(i);
+                if (selectedDevice == null) return;
+                String deviceName = safeDeviceName(selectedDevice);
+                String deviceAddress = safeDeviceAddress(selectedDevice);
                 Log.d(TAG, "onItemClick: A device is selected.");
                 Log.d(TAG, "onItemClick: DEVICE NAME: " + deviceName);
                 Log.d(TAG, "onItemClick: DEVICE ADDRESS: " + deviceAddress);
 
                 mBluetoothConnection = BluetoothConnectionService.getInstance(requireContext());
-                mBTDevice = mPairedBTDevices.get(i);
-            }
-        });
-
-
-        bluetoothSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
-            // Enabling and Disabling of Bluetooth on The Device
-            @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                Log.d(TAG, "onChecked: Enabling/Disabling Bluetooth");
-                if(isChecked){
-                    compoundButton.setText("ON");
-                }else
-                {
-                    compoundButton.setText("OFF");
-                }
-
-                if (mBluetoothAdapter == null) {
-                    Log.d(TAG, "enableDisableBT: Does not have Bluetooth capabilities");
-                    updateStatus("Error: Bluetooth is not supported on this device");
-                    compoundButton.setChecked(false);
-                }
-                else {
-                    if (!mBluetoothAdapter.isEnabled()) {
-                        Log.d(TAG, "enableDisableBT: Enabling Bluetooth");
-
-                        Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-                        discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-                        startActivity(discoverableIntent);
-
-                        compoundButton.setChecked(true);
-
-                        //IntentFilter catches the state change
-                        IntentFilter BTIntent = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-                        getActivity().registerReceiver(mBroadcastReceiver1, BTIntent);
-                    }
-                    if (mBluetoothAdapter.isEnabled()) {
-                        Log.d(TAG, "enableDisableBT: Disabling Bluetooth");
-                        mBluetoothAdapter.disable();
-
-                        IntentFilter BTIntent = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-                        getActivity().registerReceiver(mBroadcastReceiver1, BTIntent);
-                    }
-                }
+                mBTDevice = selectedDevice;
             }
         });
 
@@ -292,10 +242,10 @@ public class BluetoothSetUp extends Fragment {
                 editor = sharedPreferences.edit();
                 editor.putString("connStatus", connStatusTextView.getText().toString());
                 editor.commit();
-                TextView status = Home.getBluetoothStatus();
-                String s = connStatusTextView.getText().toString();
-                //status.setText(s);
-                getActivity().finish();
+                // This SF-24 logo is the Bluetooth screen's back button. Return
+                // to Home without destroying the activity or Bluetooth service.
+                ViewPager viewPager = requireActivity().findViewById(R.id.view_pager2);
+                if (viewPager != null) viewPager.setCurrentItem(0, true);
             }
         });
 
@@ -362,11 +312,12 @@ public class BluetoothSetUp extends Fragment {
     @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT})
     public void Scanning() {
         Log.d(TAG, "toggleButton: Scanning for unpaired devices.");
-        checkBTPermissions();
+        if (!canUseBluetooth()) return;
         mNewBTDevices.clear();
         if (mBluetoothAdapter != null) {
             if (!mBluetoothAdapter.isEnabled()) {
                 updateStatus( "Please turn on Bluetooth first!");
+                return;
             }
             //If discovering, cancel discovery and start again
             if (mBluetoothAdapter.isDiscovering()) {
@@ -394,6 +345,50 @@ public class BluetoothSetUp extends Fragment {
                 mPairedDeviceListAdapter = new DeviceListAdapter(getContext(), R.layout.device_adapter_view, mPairedBTDevices);
                 lvPairedDevices.setAdapter(mPairedDeviceListAdapter);
             }
+        }
+    }
+
+    private boolean canUseBluetooth() {
+        if (mBluetoothAdapter == null) {
+            updateStatus("Bluetooth is not supported on this device");
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED
+                || ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED)) {
+            updateStatus("Bluetooth permission is required");
+            checkBTPermissions();
+            return false;
+        }
+        return true;
+    }
+
+    private void cancelDiscoverySafely() {
+        try {
+            if (mBluetoothAdapter != null && mBluetoothAdapter.isDiscovering()) {
+                mBluetoothAdapter.cancelDiscovery();
+            }
+        } catch (SecurityException e) {
+            Log.w(TAG, "Unable to stop Bluetooth discovery", e);
+        }
+    }
+
+    private String safeDeviceName(BluetoothDevice device) {
+        try {
+            String name = device.getName();
+            return name == null || name.trim().isEmpty() ? "Unknown device" : name;
+        } catch (SecurityException e) {
+            return "Unknown device";
+        }
+    }
+
+    private String safeDeviceAddress(BluetoothDevice device) {
+        try {
+            return device.getAddress();
+        } catch (SecurityException e) {
+            return "Address unavailable";
         }
     }
 
@@ -464,9 +459,9 @@ public class BluetoothSetUp extends Fragment {
 
                 if(action.equals(BluetoothDevice.ACTION_FOUND)) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    if(device.getBondState()!=BluetoothDevice.BOND_BONDED) {
+                    if(device != null && device.getBondState()!=BluetoothDevice.BOND_BONDED) {
                         mNewBTDevices.add(device);
-                        Log.d(TAG, "onReceive: " + device.getName() + " : " + device.getAddress());
+                        Log.d(TAG, "onReceive: " + safeDeviceName(device) + " : " + safeDeviceAddress(device));
                         mNewDeviceListAdapter = new DeviceListAdapter(context, R.layout.device_adapter_view, mNewBTDevices);
                         lvNewDevices.setAdapter(mNewDeviceListAdapter);
                     }
@@ -482,10 +477,11 @@ public class BluetoothSetUp extends Fragment {
 
             if(action.equals(BluetoothDevice.ACTION_BOND_STATE_CHANGED)){
                 BluetoothDevice mDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (mDevice == null) return;
                 // 3 ACTIONS
                 if(mDevice.getBondState() == BluetoothDevice.BOND_BONDED){
                     Log.d(TAG, "BOND_BONDED.");
-                    updateStatus("Successfully paired with " + mDevice.getName());
+                    updateStatus("Successfully paired with " + safeDeviceName(mDevice));
                     //mBTDevice = mDevice;
                     Scanning();
                 }
@@ -506,6 +502,7 @@ public class BluetoothSetUp extends Fragment {
 
             BluetoothDevice mDevice = intent.getParcelableExtra("Device");
             String status = intent.getStringExtra("Status");
+            if (mDevice == null || status == null || connStatusTextView == null) return;
             sharedPreferences = getActivity().getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
             editor = sharedPreferences.edit();
 
@@ -516,15 +513,15 @@ public class BluetoothSetUp extends Fragment {
                     e.printStackTrace();
                 }
 
-                Log.d(TAG, "mBroadcastReceiver5: Device now connected to "+mDevice.getName());
-                updateStatus( "Device now connected to "+mDevice.getName());
-                editor.putString("connStatus", "Connected to " + mDevice.getName());
-                connStatusTextView.setText("Connected to " + mDevice.getName());
+                Log.d(TAG, "mBroadcastReceiver5: Device now connected to "+safeDeviceName(mDevice));
+                updateStatus( "Device now connected to "+safeDeviceName(mDevice));
+                editor.putString("connStatus", "Connected to " + safeDeviceName(mDevice));
+                connStatusTextView.setText("Connected to " + safeDeviceName(mDevice));
 
             }
             else if(status.equals("disconnected") && retryConnection == false){
-                Log.d(TAG, "mBroadcastReceiver5: Disconnected from "+mDevice.getName());
-                updateStatus("Disconnected from "+mDevice.getName());
+                Log.d(TAG, "mBroadcastReceiver5: Disconnected from "+safeDeviceName(mDevice));
+                updateStatus("Disconnected from "+safeDeviceName(mDevice));
                 mBluetoothConnection = BluetoothConnectionService.getInstance(requireContext());
                 //mBluetoothConnection.startAcceptThread();
 
@@ -551,6 +548,10 @@ public class BluetoothSetUp extends Fragment {
     };
 
     public void startConnection(){
+        if (mBTDevice == null || mBluetoothConnection == null) {
+            updateStatus("Please select a paired device first");
+            return;
+        }
         startBTConnection(mBTDevice,MY_UUID);
     }
 
@@ -564,29 +565,34 @@ public class BluetoothSetUp extends Fragment {
     public void onDestroy() {
         Log.d(TAG, "onDestroy: called");
         super.onDestroy();
-        try {
-            getActivity().unregisterReceiver(mBroadcastReceiver1);
-            getActivity().unregisterReceiver(mBroadcastReceiver2);
-            getActivity().unregisterReceiver(mBroadcastReceiver3);
-            getActivity().unregisterReceiver(mBroadcastReceiver4);
-            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mBroadcastReceiver5);
-        } catch(IllegalArgumentException e){
-            e.printStackTrace();
-        }
+        unregisterReceiversSafely();
     }
 
     @Override
     public void onPause() {
         Log.d(TAG, "onPause: called");
         super.onPause();
+        unregisterReceiversSafely();
+    }
+
+    private void unregisterReceiversSafely() {
+        if (getActivity() == null) return;
+        unregisterReceiverSafely(mBroadcastReceiver1);
+        unregisterReceiverSafely(mBroadcastReceiver2);
+        unregisterReceiverSafely(mBroadcastReceiver3);
+        unregisterReceiverSafely(mBroadcastReceiver4);
         try {
-            getActivity().unregisterReceiver(mBroadcastReceiver1);
-            getActivity().unregisterReceiver(mBroadcastReceiver2);
-            getActivity().unregisterReceiver(mBroadcastReceiver3);
-            getActivity().unregisterReceiver(mBroadcastReceiver4);
-            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mBroadcastReceiver5);
-        } catch(IllegalArgumentException e){
-            e.printStackTrace();
+            LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(mBroadcastReceiver5);
+        } catch (IllegalArgumentException ignored) {
+            // Receiver was already removed or was never registered.
+        }
+    }
+
+    private void unregisterReceiverSafely(BroadcastReceiver receiver) {
+        try {
+            requireActivity().unregisterReceiver(receiver);
+        } catch (IllegalArgumentException ignored) {
+            // Receiver was already removed or was never registered.
         }
     }
 

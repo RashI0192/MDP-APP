@@ -25,6 +25,26 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/chatTabButton"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="CHAT"
+                    android:textSize="11sp" />
+                <Button
+                    android:id="@+id/imagesDetectedTabButton"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="IMAGES DETECTED"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/messageReceivedTitleTextView"
                 android:layout_width="match_parent"
@@ -40,6 +60,29 @@
                 android:scrollbars="vertical"
                 android:textSize="15sp"
                 android:background="@drawable/rounded_corner"/>
+
+            <TextView
+                android:id="@+id/detectedImagesTextView"
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:padding="20dp"
+                android:gravity="bottom"
+                android:scrollbars="vertical"
+                android:textSize="15sp"
+                android:background="@drawable/rounded_corner"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/clearImagesButton"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:text="CLEAR IMAGES"
+                android:textSize="11sp"
+                android:visibility="gone" />
 
 
             <LinearLayout

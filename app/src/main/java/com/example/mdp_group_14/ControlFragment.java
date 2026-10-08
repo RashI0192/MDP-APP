@@ -42,13 +42,7 @@ public class ControlFragment extends Fragment {
     public static Handler timerHandler = new Handler();
 
     Button startRpiRunButton;
-    Button practiceTasksButton;
     private static long exploreElapsed, fastestElapsed;
-    private long practiceStarted, practiceElapsed;
-    private boolean practiceRunning, practicePaused;
-    private Handler practiceHandler = new Handler();
-    private TextView practiceTimerView;
-    private LinearLayout practiceLapseList;
 
     public static Runnable timerRunnableExplore = new Runnable() {
         @Override
@@ -110,7 +104,6 @@ public class ControlFragment extends Fragment {
         fastestButton = root.findViewById(R.id.fastestToggleBtn2);
         fastestResetButton = root.findViewById(R.id.fastestResetImageBtn2);
         startRpiRunButton = root.findViewById(R.id.startRpiRunButton);
-        practiceTasksButton = root.findViewById(R.id.practiceTasksBtn);
         robotStatusTextView = Home.getRobotStatusTextView();
         // Timer fields are static so a configuration change does not reset an active run.
         // They are initialized to zero automatically on a fresh process.
@@ -297,8 +290,6 @@ public class ControlFragment extends Fragment {
             }
         });
 
-        practiceTasksButton.setOnClickListener(v -> showPracticeTasks());
-
         fastestResetButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
@@ -382,7 +373,13 @@ public class ControlFragment extends Fragment {
     }
 
     public static void startTaskTimer() {
+        // BEGIN is also the RPi start command. Repeated presses must not move
+        // the local clock back to the elapsed value from the previous stop.
         Home.printMessage("BEGIN");
+        if (!Home.stopTimerFlag && exploreTimer != 0) {
+            if (robotStatusTextView != null) robotStatusTextView.setText("Task Already Started");
+            return;
+        }
         Home.stopTimerFlag = false;
         exploreTimer = System.currentTimeMillis() - exploreElapsed;
         timerHandler.removeCallbacks(timerRunnableExplore);
@@ -431,46 +428,6 @@ public class ControlFragment extends Fragment {
         if (fastestButton != null && fastestButton.isChecked()) fastestButton.toggle();
         if (updateStatus) robotStatusTextView.setText("Fastest Car Finished");
     }
-
-    private void showPracticeTasks() {
-        LinearLayout panel = new LinearLayout(requireContext());
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(24, 8, 24, 8);
-        practiceTimerView = new TextView(requireContext());
-        practiceTimerView.setText("00:00");
-        practiceTimerView.setTextSize(28);
-        practiceTimerView.setTextColor(getResources().getColor(R.color.colorBlack));
-        practiceTimerView.setGravity(Gravity.CENTER);
-        panel.addView(practiceTimerView);
-        LinearLayout buttons = new LinearLayout(requireContext());
-        Button start = new Button(requireContext()); start.setText("START");
-        Button pause = new Button(requireContext()); pause.setText("PAUSE");
-        Button stop = new Button(requireContext()); stop.setText("STOP");
-        Button lapse = new Button(requireContext()); lapse.setText("LAPSE");
-        buttons.addView(start); buttons.addView(pause); buttons.addView(stop); buttons.addView(lapse);
-        panel.addView(buttons);
-        practiceLapseList = new LinearLayout(requireContext());
-        practiceLapseList.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(practiceLapseList);
-        panel.setBackgroundColor(getResources().getColor(R.color.lighterYellow));
-        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle("Practice Tasks").setView(panel).setNegativeButton("CLOSE", null).create();
-        dialog.setOnShowListener(d -> {
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(getResources().getColor(R.color.colorYellow));
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextSize(14);
-            dialog.getWindow().setBackgroundDrawableResource(R.color.lighterYellow);
-        });
-        Runnable tick = new Runnable() { public void run() { if (practiceRunning && !practicePaused) { long ms = System.currentTimeMillis() - practiceStarted; practiceTimerView.setText(formatTime(ms)); practiceHandler.postDelayed(this, 250); } } };
-        start.setOnClickListener(v -> { if (!practiceRunning) { practiceRunning = true; practicePaused = false; practiceStarted = System.currentTimeMillis() - practiceElapsed; practiceHandler.post(tick); } else if (practicePaused) { practicePaused = false; practiceStarted = System.currentTimeMillis() - practiceElapsed; practiceHandler.post(tick); } });
-        pause.setOnClickListener(v -> { if (practiceRunning && !practicePaused) { practiceElapsed = System.currentTimeMillis() - practiceStarted; practicePaused = true; pause.setText("RESUME"); } else if (practicePaused) { practicePaused = false; practiceStarted = System.currentTimeMillis() - practiceElapsed; pause.setText("PAUSE"); practiceHandler.post(tick); } });
-        stop.setOnClickListener(v -> { if (practiceRunning) practiceElapsed = System.currentTimeMillis() - practiceStarted; practiceRunning = false; practicePaused = false; practiceTimerView.setText(formatTime(practiceElapsed)); });
-        lapse.setOnClickListener(v -> { if (!practiceRunning) return; long elapsed = System.currentTimeMillis() - practiceStarted; EditText description = new EditText(requireContext()); description.setHint("Description"); description.setSingleLine(); description.setTextColor(getResources().getColor(R.color.colorBlack)); LinearLayout item = new LinearLayout(requireContext()); item.setOrientation(LinearLayout.HORIZONTAL); TextView time = new TextView(requireContext()); time.setText(formatTime(elapsed) + "  "); time.setTextColor(getResources().getColor(R.color.colorBlack)); item.addView(time); item.addView(description, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1)); practiceLapseList.addView(item); });
-        dialog.setOnDismissListener(d -> { practiceRunning = false; practiceHandler.removeCallbacks(tick); });
-        dialog.show();
-    }
-
-    private String formatTime(long millis) { return String.format("%02d:%02d", (millis / 60000), (millis / 1000) % 60); }
-
-
 
     private static void showLog(String message) {
         Log.d(TAG, message);

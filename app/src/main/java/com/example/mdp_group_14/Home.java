@@ -488,7 +488,7 @@ public class Home extends Fragment {
                     String[] cmd = message.split(",", -1);
                     if (cmd.length != 3) throw new IllegalArgumentException("Malformed TARGET line");
                     int obstacleNumber = Integer.parseInt(cmd[1].trim());
-                    BluetoothCommunications.updateMessageLog(context, "Obstacle no: " + obstacleNumber + " TARGET ID: " + cmd[2].trim());
+                    BluetoothCommunications.addDetectedImage(context, message);
 
 //                    if (cmd[2].contains("STOP"))
 //                    {

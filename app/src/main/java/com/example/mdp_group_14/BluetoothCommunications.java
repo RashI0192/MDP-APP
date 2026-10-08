@@ -26,7 +26,9 @@ public class BluetoothCommunications extends Fragment {
 
     private SharedPreferences sharedPreferences;
     private TextView messageReceivedTextView;
+    private TextView detectedImagesTextView;
     private EditText typeBoxEditText;
+    private static final String DETECTED_IMAGES_PREF = "detectedImages";
 
     public static void updateMessageLog(Context context, String message) {
         SharedPreferences prefs = context.getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
@@ -51,6 +53,8 @@ public class BluetoothCommunications extends Fragment {
         IntentFilter filter = new IntentFilter();
         filter.addAction("incomingMessage");
         filter.addAction("uiMessage");
+        filter.addAction("uiImageDetected");
+        filter.addAction("imagesCleared");
         LocalBroadcastManager.getInstance(requireContext()).registerReceiver(mReceiver, filter);
     }
 
@@ -65,6 +69,13 @@ public class BluetoothCommunications extends Fragment {
         // Message Box
         messageReceivedTextView = root.findViewById(R.id.messageReceivedTitleTextView);
         messageReceivedTextView.setMovementMethod(new ScrollingMovementMethod());
+        detectedImagesTextView = root.findViewById(R.id.detectedImagesTextView);
+        Button chatTab = root.findViewById(R.id.chatTabButton);
+        Button imagesTab = root.findViewById(R.id.imagesDetectedTabButton);
+        Button clearImages = root.findViewById(R.id.clearImagesButton);
+        chatTab.setOnClickListener(v -> showChatTab(true));
+        imagesTab.setOnClickListener(v -> showChatTab(false));
+        clearImages.setOnClickListener(v -> clearDetectedImages(requireContext()));
         typeBoxEditText = root.findViewById(R.id.typeBoxEditText);
         ControlFragment.exploreTimeTextView = root.findViewById(R.id.chatTaskTimerTextView);
 
@@ -86,6 +97,8 @@ public class BluetoothCommunications extends Fragment {
             messageReceivedTextView.post(() ->
                     messageReceivedTextView.scrollTo(0, messageReceivedTextView.getBottom()));
         }
+        String savedImages = sharedPreferences.getString(DETECTED_IMAGES_PREF, "");
+        if (!savedImages.isEmpty()) detectedImagesTextView.setText(savedImages);
 
         send.setOnClickListener(view -> {
             showLog("Clicked sendTextBtn");
@@ -99,6 +112,51 @@ public class BluetoothCommunications extends Fragment {
         });
 
         return root;
+    }
+
+    private void showChatTab(boolean showChat) {
+        messageReceivedTextView.setVisibility(showChat ? View.VISIBLE : View.GONE);
+        detectedImagesTextView.setVisibility(showChat ? View.GONE : View.VISIBLE);
+        getView().findViewById(R.id.clearImagesButton).setVisibility(showChat ? View.GONE : View.VISIBLE);
+    }
+
+    public static boolean isImageDetectionMessage(String message) {
+        String value = message == null ? "" : message.trim().toUpperCase(java.util.Locale.ROOT);
+        return value.startsWith("TARGET,") || value.startsWith("TARGET~")
+                || value.startsWith("IMAGE,") || value.startsWith("IMAGE~")
+                || value.startsWith("IMAGE_DETECTED") || value.startsWith("DETECTED_IMAGE");
+    }
+
+    public static String formatImageDetectionMessage(String message) {
+        String value = message == null ? "" : message.trim();
+        if (value.regionMatches(true, 0, "TARGET,", 0, 7)) {
+            String[] fields = value.split(",", -1);
+            if (fields.length >= 3) return "Obstacle no: " + fields[1].trim() + " TARGET ID: " + fields[2].trim();
+        }
+        if (value.regionMatches(true, 0, "TARGET~", 0, 7)) {
+            String[] fields = value.split("~", -1);
+            if (fields.length >= 3) return "Obstacle no: " + fields[1].trim() + " TARGET ID: " + fields[2].trim();
+        }
+        return value;
+    }
+
+    public static void addDetectedImage(Context context, String message) {
+        if (context == null || message == null || message.trim().isEmpty()) return;
+        SharedPreferences prefs = context.getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
+        String formatted = formatImageDetectionMessage(message);
+        String previous = prefs.getString(DETECTED_IMAGES_PREF, "");
+        for (String line : previous.split("\\n", -1)) if (line.equals(formatted)) return;
+        String next = previous.isEmpty() ? formatted : previous + "\n" + formatted;
+        prefs.edit().putString(DETECTED_IMAGES_PREF, next).apply();
+        Intent intent = new Intent("uiImageDetected");
+        intent.putExtra("receivedMessage", formatted);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+    }
+
+    public static void clearDetectedImages(Context context) {
+        context.getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE)
+                .edit().remove(DETECTED_IMAGES_PREF).apply();
+        LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent("imagesCleared"));
     }
 
     private void bindMovementControls(View root) {
@@ -142,7 +200,16 @@ public class BluetoothCommunications extends Fragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             String text = intent.getStringExtra("receivedMessage");
-            if (messageReceivedTextView != null) {
+            if ("imagesCleared".equals(intent.getAction())) {
+                if (detectedImagesTextView != null) detectedImagesTextView.setText("");
+            } else if ("uiImageDetected".equals(intent.getAction())) {
+                if (detectedImagesTextView != null && text != null) {
+                    String current = detectedImagesTextView.getText().toString();
+                    if (!current.contains(text)) detectedImagesTextView.append((current.isEmpty() ? "" : "\n") + text);
+                }
+            } else if ("incomingMessage".equals(intent.getAction()) && isImageDetectionMessage(text)) {
+                addDetectedImage(context, text);
+            } else if (messageReceivedTextView != null && text != null) {
                 messageReceivedTextView.append(text + "\n");
             }
         }

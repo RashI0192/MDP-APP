@@ -13,7 +13,6 @@
     </LinearLayout>
 
     <LinearLayout android:layout_width="156dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:orientation="vertical" android:padding="4dp" android:visibility="gone">
-        <Button android:id="@+id/practiceTasksBtn" android:layout_width="match_parent" android:layout_height="38dp" android:backgroundTint="@color/lightRed" android:text="PRACTICE" android:textColor="@color/black" android:textSize="11sp" android:textStyle="bold" />
         <Button android:id="@+id/startRpiRunButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="6dp" android:backgroundTint="@color/colorYellow" android:text="START RPI RUN" android:textColor="@color/black" android:textSize="10sp" android:textStyle="bold" android:contentDescription="Tell the Raspberry Pi to start the challenge run" />
         <TextView android:id="@+id/fastestTimeTextView2" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="2dp" android:background="@drawable/control_white_box" android:gravity="center" android:text="00:00" android:textColor="@color/black" android:textSize="20sp" android:textStyle="bold" />
         <ToggleButton android:id="@+id/fastestToggleBtn2" android:layout_width="match_parent" android:layout_height="42dp" android:visibility="gone" android:textOff="START" android:textOn="STOP" />
