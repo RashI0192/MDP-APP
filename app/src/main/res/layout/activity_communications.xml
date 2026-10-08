@@ -79,7 +79,7 @@
 
             </LinearLayout>
         </LinearLayout>
-        <include layout="@layout/movement_controls" />
+        <include layout="@layout/chat_timer_controls" />
         </LinearLayout>
 
     </RelativeLayout>

@@ -26,7 +26,6 @@ public class MappingFragment extends Fragment {
     private static SharedPreferences.Editor editor;
 
     Button updateButton;
-    ImageButton saveMapObstacle;
     Button resetMapBtn, deleteObstacleBtn;
     ImageButton obstacleImageBtn;
     GridMap gridMap;
@@ -62,7 +61,6 @@ public class MappingFragment extends Fragment {
         deleteObstacleBtn = root.findViewById(R.id.deleteObstacleBtn);
         obstacleImageBtn = root.findViewById(R.id.addObstacleBtn);
 //        updateButton = root.findViewById(R.id.updateMapBtn);
-        saveMapObstacle = root.findViewById(R.id.saveBtn);
         dragSwitch = root.findViewById(R.id.dragSwitch);
         resetMapBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -92,24 +90,6 @@ public class MappingFragment extends Fragment {
                 if (dragStatus) {
                     gridMap.setSetObstacleStatus(false);
                 }
-            }
-        });
-
-        saveMapObstacle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showLog("Clicked saveMapObstacle");
-                String getObsPos = "";
-                mapPref = getContext().getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
-                editor = mapPref.edit();
-                if(!mapPref.getString("maps", "").equals("")){
-                    editor.putString("maps", "");
-                    editor.commit();
-                }
-                getObsPos = gridMap.saveObstacleList();
-                editor.putString("maps",getObsPos);
-                editor.commit();
-                showToast("Saved map");
             }
         });
 

@@ -2385,7 +2385,8 @@ public class GridMap extends View {
     }
 
     // bluetooth_bridge_node.cpp / task1_runner.py protocol: one "OBSTACLE,<n>,<x>,<y>,<facing>"
-    // line per obstacle (x,y in cell*10 cm, facing a single N/E/S/W letter), sent right before
+    // line per obstacle (x,y are zero-based grid cells in the displayed 0..19 coordinate
+    // system, facing a single N/E/S/W letter), sent right before
     // a closing "DONE" line. IDs are stable, one-based tablet obstacle numbers; every line has
     // a unique ID even if it is being resent after an image was previously identified.
     public List<String> getObstacleLines() {
@@ -2394,7 +2395,7 @@ public class GridMap extends View {
             int col = obstacleCoord.get(i)[0];
             int row = obstacleCoord.get(i)[1];
             char facing = imageBearings.get(row)[col].charAt(0);
-            lines.add("OBSTACLE," + obstacleIds.get(i) + "," + (col * 10) + "," + (row * 10) + "," + facing);
+            lines.add("OBSTACLE," + obstacleIds.get(i) + "," + col + "," + row + "," + facing);
         }
         return lines;
     }

@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -58,9 +59,6 @@ public class BluetoothCommunications extends Fragment {
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.activity_communications, container, false);
-        bindMovementControls(root);
-
-
         ImageButton send;
         send = root.findViewById(R.id.messageButton);
 
@@ -68,6 +66,16 @@ public class BluetoothCommunications extends Fragment {
         messageReceivedTextView = root.findViewById(R.id.messageReceivedTitleTextView);
         messageReceivedTextView.setMovementMethod(new ScrollingMovementMethod());
         typeBoxEditText = root.findViewById(R.id.typeBoxEditText);
+        ControlFragment.exploreTimeTextView = root.findViewById(R.id.chatTaskTimerTextView);
+
+        Button startTask = root.findViewById(R.id.chatTaskStartButton);
+        Button stopTask = root.findViewById(R.id.chatTaskStopButton);
+        Button sendObstacles = root.findViewById(R.id.chatSendObstaclesButton);
+        Button resetPost = root.findViewById(R.id.chatResetPostButton);
+        startTask.setOnClickListener(v -> ControlFragment.startTaskTimer());
+        stopTask.setOnClickListener(v -> ControlFragment.stopTaskTimer());
+        sendObstacles.setOnClickListener(v -> ControlFragment.sendObstacles());
+        resetPost.setOnClickListener(v -> ControlFragment.resetPost());
 
         // get shared preferences
         sharedPreferences = requireActivity().getSharedPreferences("Shared Preferences", Context.MODE_PRIVATE);
