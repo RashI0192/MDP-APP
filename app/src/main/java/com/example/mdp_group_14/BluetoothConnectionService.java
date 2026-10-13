@@ -60,7 +60,7 @@ public class BluetoothConnectionService {
     private final Context mContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private AcceptThread mInsecureAcceptThread;
+    private AcceptThread mAcceptThread;
     private ConnectThread mConnectThread;
     private volatile ConnectedThread mConnectedThread;
 
@@ -79,13 +79,11 @@ public class BluetoothConnectionService {
     private final Runnable linkHealthRunnable = new Runnable() {
         @Override
         public void run() {
-            final ConnectedThread activeThread = mConnectedThread;
             final long lastSeen = lastSeenElapsedMs;
             final boolean linkOk = BluetoothConnectionStatus
-                    && activeThread != null
                     && lastSeen > 0L
                     && SystemClock.elapsedRealtime() - lastSeen < LINK_TIMEOUT_MS;
-            publishLinkHealth(linkOk, activeThread, linkOk ? "inbound traffic" : "inbound timeout");
+            publishLinkHealth(linkOk);
             mainHandler.postDelayed(this, LINK_HEALTH_CHECK_MS);
         }
     };
@@ -108,8 +106,9 @@ public class BluetoothConnectionService {
             BluetoothServerSocket tmp = null;
             try {
                 if (mBluetoothAdapter != null) {
-                    tmp = mBluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord(APP_NAME, MY_UUID);
-                    Log.d(TAG, "Accept Thread: Setting up Server using: " + MY_UUID);
+                    // Secure RFCOMM authenticates and encrypts the already-bonded peer.
+                    tmp = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(APP_NAME, MY_UUID);
+                    Log.d(TAG, "Accept Thread: Setting up secure RFCOMM server using: " + MY_UUID);
                 }
             } catch (IOException | SecurityException e) {
                 // SecurityException = BLUETOOTH_CONNECT not granted yet. We retry every second,
@@ -176,7 +175,8 @@ public class BluetoothConnectionService {
         @Override
         public void run() {
             try {
-                socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+                // Secure RFCOMM requires the paired/bonded peer and negotiates encryption.
+                socket = device.createRfcommSocketToServiceRecord(uuid);
                 if (mBluetoothAdapter != null) mBluetoothAdapter.cancelDiscovery();
                 socket.connect();
                 Log.d(TAG, "RUN: ConnectThread connected.");
@@ -201,17 +201,17 @@ public class BluetoothConnectionService {
     public synchronized void startAcceptThread() {
         Log.d(TAG, "startAcceptThread");
         if (BluetoothConnectionStatus) return;      // already connected, nothing to listen for
-        if (mInsecureAcceptThread == null || !mInsecureAcceptThread.isAlive()) {
-            mInsecureAcceptThread = new AcceptThread();
-            mInsecureAcceptThread.start();
+        if (mAcceptThread == null || !mAcceptThread.isAlive()) {
+            mAcceptThread = new AcceptThread();
+            mAcceptThread.start();
         }
     }
 
     private synchronized void acceptThreadFinished(AcceptThread finishedThread) {
-        if (mInsecureAcceptThread != finishedThread) {
+        if (mAcceptThread != finishedThread) {
             return;     // connected() already replaced/cleared it
         }
-        mInsecureAcceptThread = null;
+        mAcceptThread = null;
         if (!BluetoothConnectionStatus) {
             Log.d(TAG, "AcceptThread ended; retrying listener in " + ACCEPT_RETRY_MS + " ms");
             scheduleAcceptRetry();
@@ -220,18 +220,7 @@ public class BluetoothConnectionService {
 
     public synchronized void startClientThread(BluetoothDevice device, UUID uuid) {
         Log.d(TAG, "startClientThread");
-        if (BluetoothConnectionStatus) {
-            Log.d(TAG, "startClientThread: already connected; ignoring request");
-            return;
-        }
-        if (mConnectThread != null) {
-            Log.d(TAG, "startClientThread: connection attempt already in progress");
-            return;
-        }
-        if (mInsecureAcceptThread != null) {
-            mInsecureAcceptThread.cancel();
-            mInsecureAcceptThread = null;
-        }
+        if (mConnectThread != null) mConnectThread.cancel();
         mConnectThread = new ConnectThread(device, uuid);
         mConnectThread.start();
     }
@@ -281,13 +270,8 @@ public class BluetoothConnectionService {
                     if (bytes == 0) {
                         continue;
                     }
-                    synchronized (BluetoothConnectionService.this) {
-                        if (mConnectedThread != this) {
-                            break;
-                        }
-                        lastSeenElapsedMs = SystemClock.elapsedRealtime();
-                    }
-                    publishLinkHealth(true, this, "inbound traffic");
+                    lastSeenElapsedMs = SystemClock.elapsedRealtime();
+                    publishLinkHealth(true);
                     handleIncoming(new String(buffer, 0, bytes, StandardCharsets.UTF_8));
                 } catch (IOException e) {
                     Log.e(TAG, "Error reading input stream. " + e.getMessage());
@@ -333,7 +317,6 @@ public class BluetoothConnectionService {
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Error writing to output stream. " + e.getMessage());
-                onLost();
             }
         }
 
@@ -350,7 +333,7 @@ public class BluetoothConnectionService {
                 pending.setLength(0); // an unfinished line belongs to the lost connection
             }
             lastSeenElapsedMs = 0L;
-            publishLinkHealth(false, this, "socket lost");
+            publishLinkHealth(false);
             broadcastConnection("disconnected", device);
             updateStatusViews(false, null);
             scheduleAcceptRetry();
@@ -364,14 +347,9 @@ public class BluetoothConnectionService {
 
     private synchronized void connected(BluetoothSocket socket, BluetoothDevice device) {
         Log.d(TAG, "connected: Starting.");
-        if (BluetoothConnectionStatus && mConnectedThread != null) {
-            Log.d(TAG, "connected: closing duplicate socket; active connection is retained");
-            closeQuietly(socket);
-            return;
-        }
-        if (mInsecureAcceptThread != null) {
-            mInsecureAcceptThread.cancel();
-            mInsecureAcceptThread = null;
+        if (mAcceptThread != null) {
+            mAcceptThread.cancel();
+            mAcceptThread = null;
         }
         if (mConnectedThread != null) {
             mConnectedThread.cancel();
@@ -381,7 +359,7 @@ public class BluetoothConnectionService {
         mConnectedThread = thread;
         BluetoothConnectionStatus = true;
         lastSeenElapsedMs = SystemClock.elapsedRealtime();
-        publishLinkHealth(true, thread, "socket connected");
+        publishLinkHealth(true);
         thread.start();
     }
 
@@ -405,21 +383,15 @@ public class BluetoothConnectionService {
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(intent);
     }
 
-    private synchronized void publishLinkHealth(boolean linkOk, ConnectedThread source, String reason) {
-        if (source != null && mConnectedThread != source) {
-            Log.d(TAG, "Ignoring stale link health update: " + reason);
-            return;
-        }
+    private synchronized void publishLinkHealth(boolean linkOk) {
         if (linkHealthPublished && BluetoothLinkOk == linkOk) {
             return;
         }
         linkHealthPublished = true;
         BluetoothLinkOk = linkOk;
-        Log.i(TAG, "Bluetooth link " + (linkOk ? "UP" : "DOWN") + ": " + reason);
         Intent linkStatus = new Intent("BluetoothLinkStatus");
         linkStatus.putExtra("link_ok", linkOk);
         linkStatus.putExtra("last_seen_elapsed_ms", lastSeenElapsedMs);
-        linkStatus.putExtra("reason", reason);
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(linkStatus);
     }
 

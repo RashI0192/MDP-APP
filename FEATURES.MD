@@ -220,13 +220,16 @@ RPi
 The obstacle protocol is formatted as:
 
 ```text
-OBSTACLE,<number>,<x centimetres>,<y centimetres>,<direction>
+OBSTACLE,<number>,<x grid cell>,<y grid cell>,<direction>
 ```
+
+The grid coordinates are zero-based and remain in the range `0–19`; they are not converted to
+centimetres when sent.
 
 For example:
 
 ```text
-OBSTACLE,1,50,120,N
+OBSTACLE,1,5,12,N
 ```
 
 After all obstacles are sent, the app sends:

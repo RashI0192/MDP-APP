@@ -2,7 +2,6 @@ package com.example.mdp_group_14;
 
 import static com.example.mdp_group_14.Home.refreshMessageReceivedNS;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -10,7 +9,6 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -29,7 +27,6 @@ import java.util.Arrays;
 
 public class ControlFragment extends Fragment {
     private static final String TAG = "ControlFragment";
-    private static ControlFragment activeInstance;
 
     SharedPreferences sharedPreferences;
 
@@ -44,15 +41,8 @@ public class ControlFragment extends Fragment {
     // Timer
     public static Handler timerHandler = new Handler();
 
-    Button sendObstaclesButton;
-    Button challengeResetButton;
     Button startRpiRunButton;
-    Button explorePauseButton, fastestPauseButton, practiceTasksButton;
-    private long exploreElapsed, fastestElapsed, practiceStarted, practiceElapsed;
-    private boolean explorePaused, fastestPaused, practiceRunning, practicePaused;
-    private Handler practiceHandler = new Handler();
-    private TextView practiceTimerView;
-    private LinearLayout practiceLapseList;
+    private static long exploreElapsed, fastestElapsed;
 
     public static Runnable timerRunnableExplore = new Runnable() {
         @Override
@@ -109,56 +99,125 @@ public class ControlFragment extends Fragment {
         turnLeftImageBtn = root.findViewById(R.id.leftBtn);
         turnbleftImageBtn = root.findViewById(R.id.bleftBtn);
         turnbrightImageBtn = root.findViewById(R.id.brightBtn);
-        exploreTimeTextView = root.findViewById(R.id.exploreTimeTextView2);
         fastestTimeTextView = root.findViewById(R.id.fastestTimeTextView2);
         exploreButton = root.findViewById(R.id.exploreToggleBtn2);
-        sendObstaclesButton = root.findViewById(R.id.sendObstaclesButton);
         fastestButton = root.findViewById(R.id.fastestToggleBtn2);
         fastestResetButton = root.findViewById(R.id.fastestResetImageBtn2);
-        challengeResetButton = root.findViewById(R.id.challengeResetButton);
         startRpiRunButton = root.findViewById(R.id.startRpiRunButton);
-        explorePauseButton = root.findViewById(R.id.explorePauseBtn);
-        fastestPauseButton = root.findViewById(R.id.fastestPauseBtn);
-        practiceTasksButton = root.findViewById(R.id.practiceTasksBtn);
         robotStatusTextView = Home.getRobotStatusTextView();
-        fastestTimer = 0;
-        exploreTimer = 0;
-        exploreElapsed = fastestElapsed = 0;
+        // Timer fields are static so a configuration change does not reset an active run.
+        // They are initialized to zero automatically on a fresh process.
         //startSend = root.findViewById(R.id.startSend); //just added, need to test
 
         gridMap = Home.getGridMap();
-        activeInstance = this;
 
-        attachPressRelease(moveForwardImageBtn, "f");
-        attachPressRelease(moveBackImageBtn, "b");
-        attachPressRelease(turnLeftImageBtn, "fl");
-        attachPressRelease(turnRightImageBtn, "fr");
-        attachPressRelease(turnbleftImageBtn, "bl");
-        attachPressRelease(turnbrightImageBtn, "br");
+        // Button Listener
+        moveForwardImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLog("Clicked moveForwardImageBtn");
+                if (gridMap.getCanDrawRobot()) {
+                    gridMap.moveRobot("forward");
+                    Home.refreshLabel();    // update x and y coordinate displayed
+                    // display different statuses depending on validity of robot action
+                    if (gridMap.getValidPosition()){
+                        updateStatus("moving forward");}
+                    else {
+                        updateStatus("Unable to move forward");
+                    }
+
+                    Home.printMessage("f");
+                }
+                else
+                    updateStatus("Please press 'SET START POINT'");
+                showLog("Exiting moveForwardImageBtn");
+            }
+        });
+
+        turnRightImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLog("Clicked turnRightImageBtn");
+                if (gridMap.getCanDrawRobot()) {
+                    gridMap.moveRobot("right");
+                    Home.refreshLabel();
+                    Home.printMessage("fr");
+//                    showLog("test");
+                    System.out.println(Arrays.toString(gridMap.getCurCoord()));
+                }
+                else
+                    updateStatus("Please press 'SET START POINT'");
+                showLog("Exiting turnRightImageBtn");
+            }
+        });
+        turnbrightImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLog("Clicked turnbRightImageBtn");
+                if (gridMap.getCanDrawRobot()) {
+                    gridMap.moveRobot("backright");
+                    Home.refreshLabel();
+                    Home.printMessage("br");
+                    System.out.println(Arrays.toString(gridMap.getCurCoord()));
+                }
+                else
+                    updateStatus("Please press 'SET START POINT'");
+                showLog("Exiting turnbRightImageBtn");
+            }
+        });
+
+        moveBackImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLog("Clicked moveBackwardImageBtn");
+                if (gridMap.getCanDrawRobot()) {
+                    gridMap.moveRobot("back");
+                    Home.refreshLabel();
+                    if (gridMap.getValidPosition())
+                        updateStatus("moving backward");
+                    else
+                        updateStatus("Unable to move backward");
+                    Home.printMessage("b");
+                }
+                else
+                    updateStatus("Please press 'SET START POINT'");
+                showLog("Exiting moveBackwardImageBtn");
+            }
+        });
+
+        turnLeftImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLog("Clicked turnLeftImageBtn");
+                if (gridMap.getCanDrawRobot()) {
+                    gridMap.moveRobot("left");
+                    Home.refreshLabel();
+                    updateStatus("turning left");
+                    Home.printMessage("fl");
+                }
+                else
+                    updateStatus("Please press 'SET START POINT'");
+                showLog("Exiting turnLeftImageBtn");
+            }
+        });
+        turnbleftImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showLog("Clicked turnbLeftImageBtn");
+                if (gridMap.getCanDrawRobot()) {
+                    gridMap.moveRobot("backleft");
+                    Home.refreshLabel();
+                    updateStatus("turning left");
+                    Home.printMessage("bl");
+                }
+                else
+                    updateStatus("Please press 'SET START POINT'");
+                showLog("Exiting turnbLeftImageBtn");
+            }
+        });
 
         // Obstacle setup is separate from BEGIN. Planning is asynchronous, so the user can
         // wait for STATUS:Ready before starting the run.
-        sendObstaclesButton.setOnClickListener(view -> {
-            StringBuilder sentObstacles = new StringBuilder();
-            for (String line : gridMap.getObstacleLines()) {
-                Home.printMessage(line);
-                if (sentObstacles.length() > 0) sentObstacles.append("\n");
-                sentObstacles.append(line);
-            }
-            Home.printMessage("DONE");
-            if (sentObstacles.length() > 0) sentObstacles.append("\n");
-            sentObstacles.append("DONE");
-            Home.refreshMessageReceivedNS(sentObstacles.toString());
-            robotStatusTextView.setText("Obstacles sent");
-        });
-
-        challengeResetButton.setOnClickListener(v -> {
-            Home.printMessage("RESET");
-            resetExploreTimer(false);
-            resetFastestTimer(false);
-            robotStatusTextView.setText("Reset sent");
-        });
-
         // Start the RPi run independently of the optional local challenge timers.
         // Home.printMessage appends the required line terminator before transmission.
         startRpiRunButton.setOnClickListener(v -> {
@@ -193,7 +252,6 @@ public class ControlFragment extends Fragment {
 
                     robotStatusTextView.setText("Task 1 Started");
                     exploreTimer = System.currentTimeMillis() - exploreElapsed;
-                    explorePaused = false;
                     timerHandler.postDelayed(timerRunnableExplore, 0);
                 }
                 else {
@@ -203,20 +261,6 @@ public class ControlFragment extends Fragment {
             }
         });
 
-        explorePauseButton.setOnClickListener(v -> {
-            if (!explorePaused) {
-                exploreElapsed = System.currentTimeMillis() - exploreTimer;
-                Home.stopTimerFlag = true;
-                timerHandler.removeCallbacks(timerRunnableExplore);
-                explorePauseButton.setText("RESUME");
-            } else {
-                exploreTimer = System.currentTimeMillis() - exploreElapsed;
-                Home.stopTimerFlag = false;
-                timerHandler.post(timerRunnableExplore);
-                explorePauseButton.setText("PAUSE");
-            }
-            explorePaused = !explorePaused;
-        });
 
 
         //Start Task 2 Challenge Timer
@@ -238,7 +282,6 @@ public class ControlFragment extends Fragment {
                     Home.stopWk9TimerFlag = false;
                     robotStatusTextView.setText("Task 2 Started");
                     fastestTimer = System.currentTimeMillis() - fastestElapsed;
-                    fastestPaused = false;
                     timerHandler.postDelayed(timerRunnableFastest, 0);
                 }
                 else
@@ -247,30 +290,13 @@ public class ControlFragment extends Fragment {
             }
         });
 
-        fastestPauseButton.setOnClickListener(v -> {
-            if (!fastestPaused) {
-                fastestElapsed = System.currentTimeMillis() - fastestTimer;
-                Home.stopWk9TimerFlag = true;
-                timerHandler.removeCallbacks(timerRunnableFastest);
-                fastestPauseButton.setText("RESUME");
-            } else {
-                fastestTimer = System.currentTimeMillis() - fastestElapsed;
-                Home.stopWk9TimerFlag = false;
-                timerHandler.post(timerRunnableFastest);
-                fastestPauseButton.setText("PAUSE");
-            }
-            fastestPaused = !fastestPaused;
-        });
-
-        practiceTasksButton.setOnClickListener(v -> showPracticeTasks());
-
         fastestResetButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
                 showLog("Clicked fastestResetImgBtn");
                 showToast("Resetting Fastest Time...");
                 fastestTimeTextView.setText("00:00");
-                fastestElapsed = 0; fastestPaused = false; fastestPauseButton.setText("PAUSE");
+                fastestElapsed = 0;
                 robotStatusTextView.setText("Fastest Car Finished");
                 if(fastestButton.isChecked()){
                     fastestButton.toggle();
@@ -315,75 +341,93 @@ public class ControlFragment extends Fragment {
         return root;
     }
 
-    private void resetExploreTimer(boolean updateStatus) {
-        exploreTimeTextView.setText("00:00");
+    public static void sendObstacles() {
+        StringBuilder sentObstacles = new StringBuilder();
+        for (String line : gridMap.getObstacleLines()) {
+            Home.printMessage(line);
+            if (sentObstacles.length() > 0) sentObstacles.append("\n");
+            sentObstacles.append(line);
+        }
+        Home.printMessage("DONE");
+        if (sentObstacles.length() > 0) sentObstacles.append("\n");
+        sentObstacles.append("DONE");
+        Home.refreshMessageReceivedNS(sentObstacles.toString());
+        if (robotStatusTextView != null) robotStatusTextView.setText("Obstacles sent");
+    }
+
+    public static void resetPost() {
+        Home.printMessage("RESET");
+        resetExploreTimer(false);
+        resetFastestTimer(false);
+        if (robotStatusTextView != null) robotStatusTextView.setText("Reset sent");
+    }
+
+    private static void resetExploreTimer(boolean updateStatus) {
+        if (exploreTimeTextView != null) exploreTimeTextView.setText("00:00");
         exploreElapsed = 0;
         exploreTimer = 0;
-        explorePaused = false;
-        explorePauseButton.setText("PAUSE");
         Home.stopTimerFlag = true;
         timerHandler.removeCallbacks(timerRunnableExplore);
-        if (exploreButton.isChecked()) exploreButton.toggle();
+        if (exploreButton != null && exploreButton.isChecked()) exploreButton.toggle();
         if (updateStatus) robotStatusTextView.setText("Not Available");
     }
 
-    private void resetFastestTimer(boolean updateStatus) {
+    public static void startTaskTimer() {
+        // BEGIN is also the RPi start command. Repeated presses must not move
+        // the local clock back to the elapsed value from the previous stop.
+        Home.printMessage("BEGIN");
+        if (!Home.stopTimerFlag && exploreTimer != 0) {
+            if (robotStatusTextView != null) robotStatusTextView.setText("Task Already Started");
+            return;
+        }
+        Home.stopTimerFlag = false;
+        exploreTimer = System.currentTimeMillis() - exploreElapsed;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        timerHandler.post(timerRunnableExplore);
+        if (robotStatusTextView != null) robotStatusTextView.setText("Task Started");
+    }
+
+    public static void stopTaskTimer() {
+        if (!Home.stopTimerFlag && exploreTimer != 0) {
+            exploreElapsed = System.currentTimeMillis() - exploreTimer;
+        }
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        if (robotStatusTextView != null) robotStatusTextView.setText("Task Stopped");
+        Home.printMessage("STOP");
+    }
+
+    /** Timer controlled by the RPi STATUS/START/STOP protocol messages. */
+    public static void startRpiTimer() {
+        if (exploreTimeTextView == null) return;
+        if (!Home.stopTimerFlag && exploreTimer != 0) return;
+        Home.stopTimerFlag = false;
+        exploreTimer = System.currentTimeMillis();
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        timerHandler.post(timerRunnableExplore);
+    }
+
+    public static void stopRpiTimer() {
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+    }
+
+    public static void resetRpiTimer() {
+        Home.stopTimerFlag = true;
+        timerHandler.removeCallbacks(timerRunnableExplore);
+        exploreTimer = 0;
+        if (exploreTimeTextView != null) exploreTimeTextView.setText("00:00");
+    }
+
+    private static void resetFastestTimer(boolean updateStatus) {
         fastestTimeTextView.setText("00:00");
         fastestElapsed = 0;
         fastestTimer = 0;
-        fastestPaused = false;
-        fastestPauseButton.setText("PAUSE");
         Home.stopWk9TimerFlag = true;
         timerHandler.removeCallbacks(timerRunnableFastest);
-        if (fastestButton.isChecked()) fastestButton.toggle();
+        if (fastestButton != null && fastestButton.isChecked()) fastestButton.toggle();
         if (updateStatus) robotStatusTextView.setText("Fastest Car Finished");
     }
-
-    public static void resetChallengeTimers() {
-        if (activeInstance == null) return;
-        activeInstance.resetExploreTimer(false);
-        activeInstance.resetFastestTimer(false);
-    }
-
-    private void showPracticeTasks() {
-        LinearLayout panel = new LinearLayout(requireContext());
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(24, 8, 24, 8);
-        practiceTimerView = new TextView(requireContext());
-        practiceTimerView.setText("00:00");
-        practiceTimerView.setTextSize(28);
-        practiceTimerView.setTextColor(getResources().getColor(R.color.colorBlack));
-        practiceTimerView.setGravity(Gravity.CENTER);
-        panel.addView(practiceTimerView);
-        LinearLayout buttons = new LinearLayout(requireContext());
-        Button start = new Button(requireContext()); start.setText("START");
-        Button pause = new Button(requireContext()); pause.setText("PAUSE");
-        Button stop = new Button(requireContext()); stop.setText("STOP");
-        Button lapse = new Button(requireContext()); lapse.setText("LAPSE");
-        buttons.addView(start); buttons.addView(pause); buttons.addView(stop); buttons.addView(lapse);
-        panel.addView(buttons);
-        practiceLapseList = new LinearLayout(requireContext());
-        practiceLapseList.setOrientation(LinearLayout.VERTICAL);
-        panel.addView(practiceLapseList);
-        panel.setBackgroundColor(getResources().getColor(R.color.lighterYellow));
-        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle("Practice Tasks").setView(panel).setNegativeButton("CLOSE", null).create();
-        dialog.setOnShowListener(d -> {
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(getResources().getColor(R.color.colorYellow));
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextSize(14);
-            dialog.getWindow().setBackgroundDrawableResource(R.color.lighterYellow);
-        });
-        Runnable tick = new Runnable() { public void run() { if (practiceRunning && !practicePaused) { long ms = System.currentTimeMillis() - practiceStarted; practiceTimerView.setText(formatTime(ms)); practiceHandler.postDelayed(this, 250); } } };
-        start.setOnClickListener(v -> { if (!practiceRunning) { practiceRunning = true; practicePaused = false; practiceStarted = System.currentTimeMillis() - practiceElapsed; practiceHandler.post(tick); } else if (practicePaused) { practicePaused = false; practiceStarted = System.currentTimeMillis() - practiceElapsed; practiceHandler.post(tick); } });
-        pause.setOnClickListener(v -> { if (practiceRunning && !practicePaused) { practiceElapsed = System.currentTimeMillis() - practiceStarted; practicePaused = true; pause.setText("RESUME"); } else if (practicePaused) { practicePaused = false; practiceStarted = System.currentTimeMillis() - practiceElapsed; pause.setText("PAUSE"); practiceHandler.post(tick); } });
-        stop.setOnClickListener(v -> { if (practiceRunning) practiceElapsed = System.currentTimeMillis() - practiceStarted; practiceRunning = false; practicePaused = false; practiceTimerView.setText(formatTime(practiceElapsed)); });
-        lapse.setOnClickListener(v -> { if (!practiceRunning) return; long elapsed = System.currentTimeMillis() - practiceStarted; EditText description = new EditText(requireContext()); description.setHint("Description"); description.setSingleLine(); description.setTextColor(getResources().getColor(R.color.colorBlack)); LinearLayout item = new LinearLayout(requireContext()); item.setOrientation(LinearLayout.HORIZONTAL); TextView time = new TextView(requireContext()); time.setText(formatTime(elapsed) + "  "); time.setTextColor(getResources().getColor(R.color.colorBlack)); item.addView(time); item.addView(description, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1)); practiceLapseList.addView(item); });
-        dialog.setOnDismissListener(d -> { practiceRunning = false; practiceHandler.removeCallbacks(tick); });
-        dialog.show();
-    }
-
-    private String formatTime(long millis) { return String.format("%02d:%02d", (millis / 60000), (millis / 1000) % 60); }
-
-
 
     private static void showLog(String message) {
         Log.d(TAG, message);
@@ -396,50 +440,6 @@ public class ControlFragment extends Fragment {
     @Override
     public void onDestroy(){
         super.onDestroy();
-    }
-
-    private View activeButton;
-
-    @SuppressLint("ClickableViewAccessibility")
-    private void attachPressRelease(ImageButton button, String command) {
-        button.setOnTouchListener((view, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (activeButton != null) return true;
-                    activeButton = view;
-                    view.setPressed(true);
-                    Home.printMessage(command);
-                    return true;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    if (activeButton != view) return true;
-                    view.setPressed(false);
-                    activeButton = null;
-                    Home.printMessage("STOP");
-                    return true;
-                default:
-                    return true;
-            }
-        });
-    }
-
-    private void releaseActiveButton() {
-        if (activeButton == null) return;
-        activeButton.setPressed(false);
-        activeButton = null;
-        Home.printMessage("STOP");
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        releaseActiveButton();
-    }
-
-    @Override
-    public void onDestroyView() {
-        releaseActiveButton();
-        super.onDestroyView();
     }
 
     private void updateStatus(String message) {
