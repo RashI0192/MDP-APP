@@ -575,11 +575,20 @@ public class ControlFragment extends Fragment {
             addChartTitle(box, "Average time split", Color.BLACK);
             box.addView(new PieChartView(requireContext(), runs));
             TextView details = new TextView(requireContext()); details.setText("Tap a run to view its lag notes and final notes:"); details.setPadding(4, 14, 4, 4); box.addView(details);
-            for (int i = 0; i < runs.size(); i++) { final int index = i; Button runButton = new Button(requireContext()); runButton.setText("RUN " + (i + 1)); runButton.setOnClickListener(v -> showRunDetails(task, index + 1, runs.get(index))); box.addView(runButton); }
+            LinearLayout runGrid = new LinearLayout(requireContext()); runGrid.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout runRow = null;
+            for (int i = 0; i < runs.size(); i++) {
+                if (i % 5 == 0) { runRow = new LinearLayout(requireContext()); runRow.setOrientation(LinearLayout.HORIZONTAL); runGrid.addView(runRow); }
+                final int index = i; Button runButton = new Button(requireContext()); runButton.setText("RUN " + (i + 1));
+                runButton.setTextSize(10); runButton.setOnClickListener(v -> showRunDetails(task, index + 1, runs.get(index)));
+                runRow.addView(runButton, new LinearLayout.LayoutParams(0, 48, 1));
+            }
+            box.addView(runGrid);
         }
         android.widget.ScrollView scroll = new android.widget.ScrollView(requireContext()); scroll.addView(box);
         AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " results").setView(scroll).setPositiveButton("DONE", null).create();
         dialog.show();
+        if (dialog.getWindow() != null) dialog.getWindow().setLayout((int) (getResources().getDisplayMetrics().widthPixels * 0.92f), (int) (getResources().getDisplayMetrics().heightPixels * 0.82f));
         styleDialog(dialog);
     }
 
