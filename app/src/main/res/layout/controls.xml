@@ -11,7 +11,7 @@
         <TextView android:layout_width="match_parent" android:layout_height="28dp" android:gravity="center_vertical" android:text="CHALLENGE" android:textColor="@color/colorBlack" android:textSize="12sp" android:textStyle="bold" />
         <Button android:id="@+id/task1PracticeButton" android:layout_width="match_parent" android:layout_height="38dp" android:backgroundTint="@color/colorRed" android:text="TASK 1 PRACTICE" android:textColor="@color/white" android:textSize="10sp" android:textStyle="bold" />
         <Button android:id="@+id/task2PracticeButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="4dp" android:backgroundTint="@color/colorYellow" android:text="TASK 2 PRACTICE" android:textColor="@color/black" android:textSize="10sp" android:textStyle="bold" />
-        <Button android:id="@+id/resultsAnalyserButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="4dp" android:backgroundTint="@color/black" android:text="RESULTS ANALYSER" android:textColor="@color/white" android:textSize="10sp" android:textStyle="bold" />
+        <Button android:id="@+id/resultsAnalyserButton" android:layout_width="match_parent" android:layout_height="38dp" android:layout_marginTop="4dp" android:backgroundTint="@color/colorRed" android:text="RESULTS ANALYSER" android:textColor="@color/white" android:textSize="10sp" android:textStyle="bold" />
         <ToggleButton android:id="@+id/exploreToggleBtn2" android:layout_width="match_parent" android:layout_height="42dp" android:visibility="gone" android:textOff="START" android:textOn="STOP" />
     </LinearLayout>
 

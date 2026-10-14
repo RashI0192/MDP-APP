@@ -524,6 +524,7 @@ public class ControlFragment extends Fragment {
                     }).show();
         }));
         dialog.show();
+        styleDialog(dialog);
     }
 
     private void saveRun(String task, long prep, long run, String tag, String note) {
@@ -536,7 +537,9 @@ public class ControlFragment extends Fragment {
 
     private void showResultsDialog() {
         String[] choices = {"Task 1", "Task 2"};
-        new AlertDialog.Builder(requireContext()).setTitle("Results analyser").setItems(choices, (d, which) -> showTaskResults(choices[which])).setNegativeButton("CLOSE", null).show();
+        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle("Results analyser").setItems(choices, (d, which) -> showTaskResults(choices[which])).setNegativeButton("CLOSE", null).create();
+        dialog.show();
+        styleDialog(dialog);
     }
 
     private void showTaskResults(String task) {
@@ -544,7 +547,20 @@ public class ControlFragment extends Fragment {
         LinearLayout box = new LinearLayout(requireContext()); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(28, 8, 28, 8);
         if (data.isEmpty()) { TextView empty = new TextView(requireContext()); empty.setText("No runs saved yet. Complete a practice run to see your progress."); box.addView(empty); }
         else { long best = Long.MAX_VALUE; int n = 0; for (String row : data.split("\\|")) { String[] p = row.split(",", 4); if (p.length < 2) continue; long prep = Long.parseLong(p[0]), run = Long.parseLong(p[1]); best = Math.min(best, prep + run); n++; addResultRow(box, "Run " + n, prep, run, prep + run, best); } }
-        new AlertDialog.Builder(requireContext()).setTitle(task + " results").setView(box).setPositiveButton("DONE", null).show();
+        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " results").setView(box).setPositiveButton("DONE", null).create();
+        dialog.show();
+        styleDialog(dialog);
+    }
+
+    private void styleDialog(AlertDialog dialog) {
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(getResources().getColor(R.color.white)));
+        }
+        int red = getResources().getColor(R.color.colorRed);
+        int yellow = getResources().getColor(R.color.colorYellow);
+        if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(red);
+        if (dialog.getButton(AlertDialog.BUTTON_NEGATIVE) != null) dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(red);
+        if (dialog.getButton(AlertDialog.BUTTON_NEUTRAL) != null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(yellow);
     }
 
     private void addResultRow(LinearLayout box, String label, long prep, long run, long total, long best) {
