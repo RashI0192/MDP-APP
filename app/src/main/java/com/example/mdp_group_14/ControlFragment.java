@@ -469,31 +469,46 @@ public class ControlFragment extends Fragment {
         EditText note = new EditText(requireContext());
         note.setHint("Describe what happened during this run...");
         note.setMinLines(2); note.setGravity(Gravity.TOP);
+        LinearLayout lagNotes = new LinearLayout(requireContext());
+        lagNotes.setOrientation(LinearLayout.VERTICAL);
         LinearLayout actions = new LinearLayout(requireContext());
         actions.setGravity(Gravity.CENTER);
         Button start = new Button(requireContext()); start.setText("START");
         Button lag = new Button(requireContext()); lag.setText("LAG");
         Button stop = new Button(requireContext()); stop.setText("STOP");
         actions.addView(start); actions.addView(lag); actions.addView(stop);
-        box.addView(timer); box.addView(actions); box.addView(tag); box.addView(note);
+        box.addView(timer); box.addView(actions); box.addView(lagNotes); box.addView(tag); box.addView(note);
         AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " Practice")
                 .setMessage("Start the run, mark any lag, then submit your notes.")
                 .setView(box).setNegativeButton("CANCEL", null).setPositiveButton("SUBMIT", null).create();
-        final long[] started = {0}; final long[] stopped = {0}; final long[] lagStarted = {0}; final long[] lagTotal = {0};
+        final long[] started = {0}; final long[] stopped = {0}; final long[] lagTotal = {0}; final int[] lagCount = {0};
+        final java.util.ArrayList<EditText> lagFields = new java.util.ArrayList<>();
+        final java.util.ArrayList<String> lagTimes = new java.util.ArrayList<>();
         final Handler handler = new Handler();
         final Runnable clock = new Runnable() { public void run() {
             if (started[0] != 0 && stopped[0] == 0) { timer.setText(formatDuration(System.currentTimeMillis() - started[0])); handler.postDelayed(this, 250); }
         }};
         start.setOnClickListener(v -> { if (started[0] == 0) { started[0] = System.currentTimeMillis(); handler.post(clock); } });
         lag.setOnClickListener(v -> { if (started[0] != 0 && stopped[0] == 0) {
-            if (lagStarted[0] == 0) { lagStarted[0] = System.currentTimeMillis(); lag.setText("RESUME"); }
-            else { lagTotal[0] += System.currentTimeMillis() - lagStarted[0]; lagStarted[0] = 0; lag.setText("LAG"); }
+            lagCount[0]++;
+            EditText lagField = new EditText(requireContext());
+            String lagTime = formatDuration(System.currentTimeMillis() - started[0]);
+            lagField.setHint("Lag " + lagCount[0] + " description (at " + lagTime + ")");
+            lagField.setSingleLine(false);
+            lagNotes.addView(lagField);
+            lagFields.add(lagField);
+            lagTimes.add(lagTime);
         }});
-        stop.setOnClickListener(v -> { if (started[0] != 0) { if (lagStarted[0] != 0) lagTotal[0] += System.currentTimeMillis() - lagStarted[0]; stopped[0] = System.currentTimeMillis(); handler.removeCallbacks(clock); stop.setText("STOPPED"); } });
+        stop.setOnClickListener(v -> { if (started[0] != 0) { stopped[0] = System.currentTimeMillis(); handler.removeCallbacks(clock); stop.setText("STOPPED"); } });
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(btn -> {
             if (started[0] == 0 || stopped[0] == 0) { Toast.makeText(requireContext(), "Start and stop the run first", Toast.LENGTH_SHORT).show(); return; }
             long total = stopped[0] - started[0]; long run = Math.max(0, total - lagTotal[0]);
-            saveRun(task, total - run, run, tag.getSelectedItem().toString(), note.getText().toString());
+            StringBuilder notes = new StringBuilder(note.getText().toString());
+            for (int i = 0; i < lagFields.size(); i++) {
+                if (notes.length() > 0) notes.append("; ");
+                notes.append("Lag ").append(i + 1).append(" @ ").append(lagTimes.get(i)).append(": ").append(lagFields.get(i).getText().toString());
+            }
+            saveRun(task, total - run, run, tag.getSelectedItem().toString(), notes.toString());
             dialog.dismiss(); Toast.makeText(requireContext(), "Saved as " + task + " run " + getRunCount(task), Toast.LENGTH_SHORT).show();
         }));
         dialog.show();
