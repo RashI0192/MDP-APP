@@ -463,12 +463,6 @@ public class ControlFragment extends Fragment {
         box.setPadding(28, 8, 28, 0);
         TextView timer = new TextView(requireContext());
         timer.setText("00:00"); timer.setTextSize(30); timer.setGravity(Gravity.CENTER);
-        Spinner tag = new Spinner(requireContext());
-        tag.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item,
-                new String[]{"Preparation", "Run", "Navigation", "Robot control", "Other"}));
-        EditText note = new EditText(requireContext());
-        note.setHint("Describe what happened during this run...");
-        note.setMinLines(2); note.setGravity(Gravity.TOP);
         LinearLayout lagNotes = new LinearLayout(requireContext());
         lagNotes.setOrientation(LinearLayout.VERTICAL);
         LinearLayout actions = new LinearLayout(requireContext());
@@ -477,12 +471,13 @@ public class ControlFragment extends Fragment {
         Button lag = new Button(requireContext()); lag.setText("LAG");
         Button stop = new Button(requireContext()); stop.setText("STOP");
         actions.addView(start); actions.addView(lag); actions.addView(stop);
-        box.addView(timer); box.addView(actions); box.addView(lagNotes); box.addView(tag); box.addView(note);
+        box.addView(timer); box.addView(actions); box.addView(lagNotes);
         AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " Practice")
                 .setMessage("Start the run, mark any lag, then submit your notes.")
                 .setView(box).setNegativeButton("CANCEL", null).setPositiveButton("SUBMIT", null).create();
         final long[] started = {0}; final long[] stopped = {0}; final long[] lagTotal = {0}; final int[] lagCount = {0};
         final java.util.ArrayList<EditText> lagFields = new java.util.ArrayList<>();
+        final java.util.ArrayList<String> lagTags = new java.util.ArrayList<>();
         final java.util.ArrayList<String> lagTimes = new java.util.ArrayList<>();
         final Handler handler = new Handler();
         final Runnable clock = new Runnable() { public void run() {
@@ -491,25 +486,42 @@ public class ControlFragment extends Fragment {
         start.setOnClickListener(v -> { if (started[0] == 0) { started[0] = System.currentTimeMillis(); handler.post(clock); } });
         lag.setOnClickListener(v -> { if (started[0] != 0 && stopped[0] == 0) {
             lagCount[0]++;
+            LinearLayout lagRow = new LinearLayout(requireContext());
+            lagRow.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout tagRow = new LinearLayout(requireContext());
+            Button preparation = new Button(requireContext()); preparation.setText("PREPARATION");
+            Button runTag = new Button(requireContext()); runTag.setText("RUN");
+            tagRow.addView(preparation, new LinearLayout.LayoutParams(0, 42, 1));
+            tagRow.addView(runTag, new LinearLayout.LayoutParams(0, 42, 1));
             EditText lagField = new EditText(requireContext());
             String lagTime = formatDuration(System.currentTimeMillis() - started[0]);
             lagField.setHint("Lag " + lagCount[0] + " description (at " + lagTime + ")");
             lagField.setSingleLine(false);
-            lagNotes.addView(lagField);
+            lagRow.addView(tagRow); lagRow.addView(lagField); lagNotes.addView(lagRow);
             lagFields.add(lagField);
+            lagTags.add("Preparation");
             lagTimes.add(lagTime);
+            final int lagIndex = lagTags.size() - 1;
+            preparation.setOnClickListener(x -> lagTags.set(lagIndex, "Preparation"));
+            runTag.setOnClickListener(x -> lagTags.set(lagIndex, "Run"));
         }});
         stop.setOnClickListener(v -> { if (started[0] != 0) { stopped[0] = System.currentTimeMillis(); handler.removeCallbacks(clock); stop.setText("STOPPED"); } });
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(btn -> {
             if (started[0] == 0 || stopped[0] == 0) { Toast.makeText(requireContext(), "Start and stop the run first", Toast.LENGTH_SHORT).show(); return; }
             long total = stopped[0] - started[0]; long run = Math.max(0, total - lagTotal[0]);
-            StringBuilder notes = new StringBuilder(note.getText().toString());
-            for (int i = 0; i < lagFields.size(); i++) {
-                if (notes.length() > 0) notes.append("; ");
-                notes.append("Lag ").append(i + 1).append(" @ ").append(lagTimes.get(i)).append(": ").append(lagFields.get(i).getText().toString());
-            }
-            saveRun(task, total - run, run, tag.getSelectedItem().toString(), notes.toString());
-            dialog.dismiss(); Toast.makeText(requireContext(), "Saved as " + task + " run " + getRunCount(task), Toast.LENGTH_SHORT).show();
+            EditText importantNotes = new EditText(requireContext());
+            importantNotes.setHint("Add any important notes (optional)");
+            importantNotes.setMinLines(2);
+            new AlertDialog.Builder(requireContext()).setTitle("Important notes").setView(importantNotes)
+                    .setNegativeButton("CANCEL", null).setPositiveButton("SUBMIT", (notesDialog, which) -> {
+                        StringBuilder notes = new StringBuilder(importantNotes.getText().toString());
+                        for (int i = 0; i < lagFields.size(); i++) {
+                            if (notes.length() > 0) notes.append("; ");
+                            notes.append("Lag ").append(i + 1).append(" [").append(lagTags.get(i)).append("] @ ").append(lagTimes.get(i)).append(": ").append(lagFields.get(i).getText().toString());
+                        }
+                        saveRun(task, total - run, run, lagFields.isEmpty() ? "Run" : lagTags.get(0), notes.toString());
+                        dialog.dismiss(); Toast.makeText(requireContext(), "Saved as " + task + " run " + getRunCount(task), Toast.LENGTH_SHORT).show();
+                    }).show();
         }));
         dialog.show();
     }
