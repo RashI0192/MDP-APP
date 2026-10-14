@@ -495,10 +495,10 @@ public class ControlFragment extends Fragment {
             LinearLayout lagRow = new LinearLayout(requireContext());
             lagRow.setOrientation(LinearLayout.VERTICAL);
             LinearLayout tagRow = new LinearLayout(requireContext());
-            Button preparation = new Button(requireContext()); preparation.setText("PREPARATION");
-            Button runTag = new Button(requireContext()); runTag.setText("RUN");
-            tagRow.addView(preparation, new LinearLayout.LayoutParams(0, 42, 1));
-            tagRow.addView(runTag, new LinearLayout.LayoutParams(0, 42, 1));
+            Button preparation = new Button(requireContext()); preparation.setText("PREP"); preparation.setTextSize(10); preparation.setPadding(0, 0, 0, 0);
+            Button runTag = new Button(requireContext()); runTag.setText("RUN"); runTag.setTextSize(10); runTag.setPadding(0, 0, 0, 0);
+            tagRow.addView(preparation, new LinearLayout.LayoutParams(0, 50, 1));
+            tagRow.addView(runTag, new LinearLayout.LayoutParams(0, 50, 1));
             EditText lagField = new EditText(requireContext());
             String lagTime = formatDuration(System.currentTimeMillis() - started[0]);
             lagField.setHint("Lag " + lagCount[0] + " description (at " + lagTime + ")");
@@ -508,8 +508,12 @@ public class ControlFragment extends Fragment {
             lagTags.add("Preparation");
             lagTimes.add(lagTime);
             final int lagIndex = lagTags.size() - 1;
-            preparation.setOnClickListener(x -> lagTags.set(lagIndex, "Preparation"));
-            runTag.setOnClickListener(x -> lagTags.set(lagIndex, "Run"));
+            preparation.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(220, 40, 40)));
+            preparation.setTextColor(Color.WHITE);
+            runTag.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(235, 190, 70)));
+            runTag.setTextColor(Color.BLACK);
+            preparation.setOnClickListener(x -> { lagTags.set(lagIndex, "Preparation"); preparation.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(220, 40, 40))); runTag.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.LTGRAY)); });
+            runTag.setOnClickListener(x -> { lagTags.set(lagIndex, "Run"); runTag.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(235, 190, 70))); preparation.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.LTGRAY)); });
         }});
         stop.setOnClickListener(v -> { if (started[0] != 0) { stopped[0] = System.currentTimeMillis(); handler.removeCallbacks(clock); stop.setText("STOPPED"); } });
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(btn -> {
