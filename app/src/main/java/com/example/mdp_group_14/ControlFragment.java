@@ -15,6 +15,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -37,6 +39,7 @@ public class ControlFragment extends Fragment {
     public static ToggleButton exploreButton, fastestButton;
     public static TextView exploreTimeTextView, fastestTimeTextView, robotStatusTextView;
     private static GridMap gridMap;
+    private Button task1PracticeButton, task2PracticeButton, resultsAnalyserButton;
 
     // Timer
     public static Handler timerHandler = new Handler();
@@ -105,6 +108,12 @@ public class ControlFragment extends Fragment {
         fastestResetButton = root.findViewById(R.id.fastestResetImageBtn2);
         startRpiRunButton = root.findViewById(R.id.startRpiRunButton);
         robotStatusTextView = Home.getRobotStatusTextView();
+        task1PracticeButton = root.findViewById(R.id.task1PracticeButton);
+        task2PracticeButton = root.findViewById(R.id.task2PracticeButton);
+        resultsAnalyserButton = root.findViewById(R.id.resultsAnalyserButton);
+        task1PracticeButton.setOnClickListener(v -> showPracticeDialog("Task 1"));
+        task2PracticeButton.setOnClickListener(v -> showPracticeDialog("Task 2"));
+        resultsAnalyserButton.setOnClickListener(v -> showResultsDialog());
         // Timer fields are static so a configuration change does not reset an active run.
         // They are initialized to zero automatically on a fresh process.
         //startSend = root.findViewById(R.id.startSend); //just added, need to test
@@ -447,4 +456,74 @@ public class ControlFragment extends Fragment {
         toast.setGravity(Gravity.TOP,0, 0);
         toast.show();
     }
+
+    private void showPracticeDialog(String task) {
+        LinearLayout box = new LinearLayout(requireContext());
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(28, 8, 28, 0);
+        TextView timer = new TextView(requireContext());
+        timer.setText("00:00"); timer.setTextSize(30); timer.setGravity(Gravity.CENTER);
+        Spinner tag = new Spinner(requireContext());
+        tag.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item,
+                new String[]{"Preparation", "Run", "Navigation", "Robot control", "Other"}));
+        EditText note = new EditText(requireContext());
+        note.setHint("Describe what happened during this run...");
+        note.setMinLines(2); note.setGravity(Gravity.TOP);
+        LinearLayout actions = new LinearLayout(requireContext());
+        actions.setGravity(Gravity.CENTER);
+        Button start = new Button(requireContext()); start.setText("START");
+        Button lag = new Button(requireContext()); lag.setText("LAG");
+        Button stop = new Button(requireContext()); stop.setText("STOP");
+        actions.addView(start); actions.addView(lag); actions.addView(stop);
+        box.addView(timer); box.addView(actions); box.addView(tag); box.addView(note);
+        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " Practice")
+                .setMessage("Start the run, mark any lag, then submit your notes.")
+                .setView(box).setNegativeButton("CANCEL", null).setPositiveButton("SUBMIT", null).create();
+        final long[] started = {0}; final long[] stopped = {0}; final long[] lagStarted = {0}; final long[] lagTotal = {0};
+        final Handler handler = new Handler();
+        final Runnable clock = new Runnable() { public void run() {
+            if (started[0] != 0 && stopped[0] == 0) { timer.setText(formatDuration(System.currentTimeMillis() - started[0])); handler.postDelayed(this, 250); }
+        }};
+        start.setOnClickListener(v -> { if (started[0] == 0) { started[0] = System.currentTimeMillis(); handler.post(clock); } });
+        lag.setOnClickListener(v -> { if (started[0] != 0 && stopped[0] == 0) {
+            if (lagStarted[0] == 0) { lagStarted[0] = System.currentTimeMillis(); lag.setText("RESUME"); }
+            else { lagTotal[0] += System.currentTimeMillis() - lagStarted[0]; lagStarted[0] = 0; lag.setText("LAG"); }
+        }});
+        stop.setOnClickListener(v -> { if (started[0] != 0) { if (lagStarted[0] != 0) lagTotal[0] += System.currentTimeMillis() - lagStarted[0]; stopped[0] = System.currentTimeMillis(); handler.removeCallbacks(clock); stop.setText("STOPPED"); } });
+        dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(btn -> {
+            if (started[0] == 0 || stopped[0] == 0) { Toast.makeText(requireContext(), "Start and stop the run first", Toast.LENGTH_SHORT).show(); return; }
+            long total = stopped[0] - started[0]; long run = Math.max(0, total - lagTotal[0]);
+            saveRun(task, total - run, run, tag.getSelectedItem().toString(), note.getText().toString());
+            dialog.dismiss(); Toast.makeText(requireContext(), "Saved as " + task + " run " + getRunCount(task), Toast.LENGTH_SHORT).show();
+        }));
+        dialog.show();
+    }
+
+    private void saveRun(String task, long prep, long run, String tag, String note) {
+        String old = sharedPreferences.getString(task + "_runs", "");
+        String row = prep + "," + run + "," + tag.replace(",", " ") + "," + note.replace("|", " ");
+        sharedPreferences.edit().putString(task + "_runs", old.isEmpty() ? row : old + "|" + row).apply();
+    }
+
+    private int getRunCount(String task) { String s = sharedPreferences.getString(task + "_runs", ""); return s.isEmpty() ? 0 : s.split("\\|", -1).length; }
+
+    private void showResultsDialog() {
+        String[] choices = {"Task 1", "Task 2"};
+        new AlertDialog.Builder(requireContext()).setTitle("Results analyser").setItems(choices, (d, which) -> showTaskResults(choices[which])).setNegativeButton("CLOSE", null).show();
+    }
+
+    private void showTaskResults(String task) {
+        String data = sharedPreferences.getString(task + "_runs", "");
+        LinearLayout box = new LinearLayout(requireContext()); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(28, 8, 28, 8);
+        if (data.isEmpty()) { TextView empty = new TextView(requireContext()); empty.setText("No runs saved yet. Complete a practice run to see your progress."); box.addView(empty); }
+        else { long best = Long.MAX_VALUE; int n = 0; for (String row : data.split("\\|")) { String[] p = row.split(",", 4); if (p.length < 2) continue; long prep = Long.parseLong(p[0]), run = Long.parseLong(p[1]); best = Math.min(best, prep + run); n++; addResultRow(box, "Run " + n, prep, run, prep + run, best); } }
+        new AlertDialog.Builder(requireContext()).setTitle(task + " results").setView(box).setPositiveButton("DONE", null).show();
+    }
+
+    private void addResultRow(LinearLayout box, String label, long prep, long run, long total, long best) {
+        TextView row = new TextView(requireContext()); row.setPadding(0, 10, 0, 10); row.setText(label + "   prep " + formatDuration(prep) + "   run " + formatDuration(run) + "\nTotal " + formatDuration(total) + (total == best ? "   • BEST" : "")); row.setTextSize(14); box.addView(row);
+        TextView bar = new TextView(requireContext()); bar.setText("████████████████████"); bar.setTextColor(total == best ? getResources().getColor(R.color.colorRed) : getResources().getColor(R.color.colorYellow)); box.addView(bar);
+    }
+
+    private String formatDuration(long millis) { long sec = millis / 1000; return String.format("%02d:%02d", sec / 60, sec % 60); }
 }
