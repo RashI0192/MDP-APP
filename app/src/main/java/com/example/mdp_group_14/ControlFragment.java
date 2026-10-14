@@ -94,6 +94,7 @@ public class ControlFragment extends Fragment {
         // get shared preferences
         sharedPreferences = getActivity().getSharedPreferences("Shared Preferences",
                 Context.MODE_PRIVATE);
+        seedDemoRunsIfEmpty();
 
         // variable initialization
         moveForwardImageBtn = root.findViewById(R.id.upBtn);
@@ -531,6 +532,14 @@ public class ControlFragment extends Fragment {
         String old = sharedPreferences.getString(task + "_runs", "");
         String row = prep + "," + run + "," + tag.replace(",", " ") + "," + note.replace("|", " ");
         sharedPreferences.edit().putString(task + "_runs", old.isEmpty() ? row : old + "|" + row).apply();
+    }
+
+    private void seedDemoRunsIfEmpty() {
+        if (!sharedPreferences.getString("Task 1_runs", "").isEmpty()
+                || !sharedPreferences.getString("Task 2_runs", "").isEmpty()) return;
+        String task1 = "45000,55000,Preparation,Demo run 1|35000,50000,Run,Demo run 2|25000,42000,Run,Demo run 3";
+        String task2 = "50000,65000,Preparation,Demo run 1|40000,55000,Run,Demo run 2|30000,45000,Run,Demo run 3";
+        sharedPreferences.edit().putString("Task 1_runs", task1).putString("Task 2_runs", task2).apply();
     }
 
     private int getRunCount(String task) { String s = sharedPreferences.getString(task + "_runs", ""); return s.isEmpty() ? 0 : s.split("\\|", -1).length; }
