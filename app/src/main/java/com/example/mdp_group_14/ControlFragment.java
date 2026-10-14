@@ -4,6 +4,9 @@ import static com.example.mdp_group_14.Home.refreshMessageReceivedNS;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -26,6 +29,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ControlFragment extends Fragment {
     private static final String TAG = "ControlFragment";
@@ -558,12 +563,46 @@ public class ControlFragment extends Fragment {
 
     private void showTaskResults(String task) {
         String data = sharedPreferences.getString(task + "_runs", "");
-        LinearLayout box = new LinearLayout(requireContext()); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(28, 8, 28, 8);
-        if (data.isEmpty()) { TextView empty = new TextView(requireContext()); empty.setText("No runs saved yet. Complete a practice run to see your progress."); box.addView(empty); }
-        else { long best = Long.MAX_VALUE; int n = 0; for (String row : data.split("\\|")) { String[] p = row.split(",", 4); if (p.length < 2) continue; long prep = Long.parseLong(p[0]), run = Long.parseLong(p[1]); best = Math.min(best, prep + run); n++; addResultRow(box, "Run " + n, prep, run, prep + run, best); } }
-        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " results").setView(box).setPositiveButton("DONE", null).create();
+        LinearLayout box = new LinearLayout(requireContext()); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(18, 8, 18, 8);
+        List<RunData> runs = new ArrayList<>();
+        if (!data.isEmpty()) for (String row : data.split("\\|")) { String[] p = row.split(",", 4); if (p.length >= 2) runs.add(new RunData(Long.parseLong(p[0]), Long.parseLong(p[1]), p.length > 2 ? p[2] : "Run", p.length > 3 ? p[3] : "")); }
+        if (runs.isEmpty()) { TextView empty = new TextView(requireContext()); empty.setText("No runs saved yet. Complete a practice run to see your progress."); box.addView(empty); }
+        else {
+            addChartTitle(box, "Preparation time by run", Color.rgb(220, 40, 40));
+            box.addView(new LineChartView(requireContext(), runs, true));
+            addChartTitle(box, "Run time by run", Color.rgb(210, 150, 0));
+            box.addView(new LineChartView(requireContext(), runs, false));
+            addChartTitle(box, "Average time split", Color.BLACK);
+            box.addView(new PieChartView(requireContext(), runs));
+            TextView details = new TextView(requireContext()); details.setText("Tap a run to view its lag notes and final notes:"); details.setPadding(4, 14, 4, 4); box.addView(details);
+            for (int i = 0; i < runs.size(); i++) { final int index = i; Button runButton = new Button(requireContext()); runButton.setText("RUN " + (i + 1)); runButton.setOnClickListener(v -> showRunDetails(task, index + 1, runs.get(index))); box.addView(runButton); }
+        }
+        android.widget.ScrollView scroll = new android.widget.ScrollView(requireContext()); scroll.addView(box);
+        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " results").setView(scroll).setPositiveButton("DONE", null).create();
         dialog.show();
         styleDialog(dialog);
+    }
+
+    private void addChartTitle(LinearLayout box, String title, int color) { TextView t = new TextView(requireContext()); t.setText(title); t.setTextColor(color); t.setTextSize(16); t.setTypeface(null, android.graphics.Typeface.BOLD); t.setPadding(4, 12, 4, 4); box.addView(t); }
+
+    private void showRunDetails(String task, int number, RunData run) {
+        String notes = run.notes.isEmpty() ? "No lag or final notes recorded." : run.notes.replace(";", "\n");
+        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setTitle(task + " • Run " + number)
+                .setMessage("Preparation: " + formatDuration(run.prep) + "\nRun: " + formatDuration(run.run) + "\n\n" + notes)
+                .setPositiveButton("DONE", null).create(); dialog.show(); styleDialog(dialog);
+    }
+
+    private static class RunData { long prep, run; String tag, notes; RunData(long p, long r, String t, String n) { prep=p; run=r; tag=t; notes=n; } }
+
+    private static class LineChartView extends View {
+        private final List<RunData> runs; private final boolean prep; private final Paint paint = new Paint(1);
+        LineChartView(Context c, List<RunData> r, boolean p) { super(c); runs=r; prep=p; setMinimumHeight(190); }
+        protected void onDraw(Canvas c) { super.onDraw(c); float left=52, top=18, right=getWidth()-18, bottom=160; paint.setStrokeWidth(2); paint.setColor(Color.DKGRAY); c.drawLine(left,top,left,bottom,paint); c.drawLine(left,bottom,right,bottom,paint); long max=1; for(RunData r:runs) max=Math.max(max, (prep?r.prep:r.run)/1000); float step=runs.size()>1?(right-left)/(runs.size()-1):right-left; float px=0,py=0; for(int i=0;i<runs.size();i++){float x=left+i*step;float y=bottom-((prep?runs.get(i).prep:runs.get(i).run)/1000f/max)*(bottom-top);paint.setColor(prep?Color.rgb(220,40,40):Color.rgb(210,150,0));paint.setStrokeWidth(6);c.drawCircle(x,y,5,paint);if(i>0)c.drawLine(px,py,x,y,paint);paint.setTextSize(11);c.drawText("R"+(i+1),x-8,bottom+18,paint);px=x;py=y;} paint.setColor(Color.DKGRAY);paint.setTextSize(11);c.drawText("sec",4,top+5,paint);c.drawText(String.valueOf(max),8,top+18,paint); }
+    }
+
+    private static class PieChartView extends View {
+        private final List<RunData> runs; private final Paint paint=new Paint(1); PieChartView(Context c,List<RunData> r){super(c);runs=r;setMinimumHeight(190);}
+        protected void onDraw(Canvas c){super.onDraw(c);float prep=0,run=0;for(RunData r:runs){prep+=r.prep;run+=r.run;}float total=prep+run;float l=35,t=18,s=Math.min(getWidth()-70,150);android.graphics.RectF rect=new android.graphics.RectF(l,t,l+s,t+s);paint.setColor(Color.rgb(220,40,40));c.drawArc(rect,-90,360*prep/total,true,paint);paint.setColor(Color.rgb(210,150,0));c.drawArc(rect,-90+360*prep/total,360*run/total,true,paint);paint.setColor(Color.DKGRAY);paint.setTextSize(13);c.drawText("Preparation  " + Math.round(prep/runs.size()/1000) + "s avg",l+s+15,t+55,paint);c.drawText("Run  " + Math.round(run/runs.size()/1000) + "s avg",l+s+15,t+82,paint);}
     }
 
     private void styleDialog(AlertDialog dialog) {
