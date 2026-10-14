@@ -4,6 +4,7 @@ import static com.example.mdp_group_14.Home.refreshMessageReceivedNS;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -12,15 +13,12 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
 import java.util.Arrays;
@@ -44,6 +42,7 @@ public class ControlFragment extends Fragment {
     Button startRpiRunButton;
     private static long exploreElapsed, fastestElapsed;
 
+
     public static Runnable timerRunnableExplore = new Runnable() {
         @Override
         public void run() {
@@ -59,6 +58,8 @@ public class ControlFragment extends Fragment {
             }
         }
     };
+
+
 
     public static Runnable timerRunnableFastest = new Runnable() {
         @Override
@@ -129,7 +130,7 @@ public class ControlFragment extends Fragment {
                     Home.printMessage("f");
                 }
                 else
-                    updateStatus("Please press 'SET START POINT'");
+                    updateStatus("Robot not connected. Please check connection.");
                 showLog("Exiting moveForwardImageBtn");
             }
         });
@@ -146,7 +147,7 @@ public class ControlFragment extends Fragment {
                     System.out.println(Arrays.toString(gridMap.getCurCoord()));
                 }
                 else
-                    updateStatus("Please press 'SET START POINT'");
+                    updateStatus("Robot not connected. Please check connection.");
                 showLog("Exiting turnRightImageBtn");
             }
         });
@@ -161,7 +162,7 @@ public class ControlFragment extends Fragment {
                     System.out.println(Arrays.toString(gridMap.getCurCoord()));
                 }
                 else
-                    updateStatus("Please press 'SET START POINT'");
+                    updateStatus("Robot not connected. Please check connection.");
                 showLog("Exiting turnbRightImageBtn");
             }
         });
@@ -180,7 +181,7 @@ public class ControlFragment extends Fragment {
                     Home.printMessage("b");
                 }
                 else
-                    updateStatus("Please press 'SET START POINT'");
+                    updateStatus("Robot not connected. Please check connection.");
                 showLog("Exiting moveBackwardImageBtn");
             }
         });
@@ -196,7 +197,7 @@ public class ControlFragment extends Fragment {
                     Home.printMessage("fl");
                 }
                 else
-                    updateStatus("Please press 'SET START POINT'");
+                    updateStatus("Robot not connected. Please check connection.");
                 showLog("Exiting turnLeftImageBtn");
             }
         });
@@ -211,7 +212,7 @@ public class ControlFragment extends Fragment {
                     Home.printMessage("bl");
                 }
                 else
-                    updateStatus("Please press 'SET START POINT'");
+                    updateStatus("Robot not connected. Please check connection.");
                 showLog("Exiting turnbLeftImageBtn");
             }
         });
@@ -222,9 +223,9 @@ public class ControlFragment extends Fragment {
         // Home.printMessage appends the required line terminator before transmission.
         startRpiRunButton.setOnClickListener(v -> {
             Home.printMessage("BEGIN");
-            Home.refreshMessageReceivedNS("TABLET -> RPi: BEGIN");
+            refreshMessageReceivedNS("TABLET -> RPi: BEGIN");
             robotStatusTextView.setText("Start requested");
-            showToast("Start requested from RPi");
+            showToast("Task 2: Start requested from RPi");
         });
 
         // Start Task 1 challenge
@@ -355,6 +356,11 @@ public class ControlFragment extends Fragment {
         if (robotStatusTextView != null) robotStatusTextView.setText("Obstacles sent");
     }
 
+    public static void resetChallengeTimers() {
+        resetExploreTimer(false);
+        resetFastestTimer(false);
+    }
+
     public static void resetPost() {
         Home.printMessage("RESET");
         resetExploreTimer(false);
@@ -369,7 +375,7 @@ public class ControlFragment extends Fragment {
         Home.stopTimerFlag = true;
         timerHandler.removeCallbacks(timerRunnableExplore);
         if (exploreButton != null && exploreButton.isChecked()) exploreButton.toggle();
-        if (updateStatus) robotStatusTextView.setText("Not Available");
+        if (updateStatus && robotStatusTextView != null) robotStatusTextView.setText("Not Available");
     }
 
     public static void startTaskTimer() {
@@ -420,13 +426,13 @@ public class ControlFragment extends Fragment {
     }
 
     private static void resetFastestTimer(boolean updateStatus) {
-        fastestTimeTextView.setText("00:00");
+        if (fastestTimeTextView != null) fastestTimeTextView.setText("00:00");
         fastestElapsed = 0;
         fastestTimer = 0;
         Home.stopWk9TimerFlag = true;
         timerHandler.removeCallbacks(timerRunnableFastest);
         if (fastestButton != null && fastestButton.isChecked()) fastestButton.toggle();
-        if (updateStatus) robotStatusTextView.setText("Fastest Car Finished");
+        if (updateStatus && robotStatusTextView != null) robotStatusTextView.setText("Fastest Car Finished");
     }
 
     private static void showLog(String message) {
