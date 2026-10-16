@@ -553,8 +553,8 @@ public class ControlFragment extends Fragment {
         String task1 = "200000,120000,Preparation,Bluetooth connection setup took longer|185000,112000,Run,|175000,116000,Preparation,RPi system response was slightly slow|150000,103000,Run,|170000,107000,Preparation,Bluetooth connection fluctuation|95000,95000,Run,|80000,99000,Preparation,Minor RPi processing delay|75000,85000,Run,|60000,90000,Preparation,Bluetooth connection stable|95000,70000,Run,|65000,50000,Run,";
         String task2 = "60000,58000,Run,Demo run 1|53000,55000,Preparation,Demo run 2|47000,52000,Run,Demo run 3|43000,48000,Preparation,Demo run 4|38000,46000,Run,Demo run 5|34000,43000,Preparation,Demo run 6|30000,40000,Run,Demo run 7|27000,37000,Preparation,Demo run 8|23000,35000,Run,Demo run 9|20000,32000,Preparation,Demo run 10";
         SharedPreferences.Editor demoEditor = sharedPreferences.edit();
-        if (!"2".equals(task1SeedVersion) || existing1.isEmpty() || existing1.equals(oldTask1) || existing1.equals(previousTask1)) {
-            demoEditor.putString("Task 1_runs", task1).putString("Task 1_demo_seed_version", "2");
+        if (!"3".equals(task1SeedVersion) || existing1.isEmpty() || existing1.equals(oldTask1) || existing1.equals(previousTask1)) {
+            demoEditor.putString("Task 1_runs", task1).putString("Task 1_demo_seed_version", "3");
         }
         if (existing2.isEmpty() || existing2.equals(oldTask2)) demoEditor.putString("Task 2_runs", task2);
         demoEditor.apply();
@@ -619,7 +619,8 @@ public class ControlFragment extends Fragment {
 
     private static class PieChartView extends View {
         private final List<RunData> runs; private final Paint paint=new Paint(1); PieChartView(Context c,List<RunData> r){super(c);runs=r;setMinimumHeight(190);}
-        protected void onDraw(Canvas c){super.onDraw(c);float prep=0,run=0;for(RunData r:runs){prep+=r.prep;run+=r.run;}float total=prep+run;float l=35,t=18,s=Math.min(getWidth()-70,150);android.graphics.RectF rect=new android.graphics.RectF(l,t,l+s,t+s);paint.setColor(Color.rgb(220,40,40));c.drawArc(rect,-90,360*prep/total,true,paint);paint.setColor(Color.rgb(210,150,0));c.drawArc(rect,-90+360*prep/total,360*run/total,true,paint);paint.setColor(Color.DKGRAY);paint.setTextSize(13);c.drawText("Preparation  " + Math.round(prep/runs.size()/1000) + "s avg",l+s+15,t+55,paint);c.drawText("Run  " + Math.round(run/runs.size()/1000) + "s avg",l+s+15,t+82,paint);}
+        protected void onDraw(Canvas c){super.onDraw(c);float prep=0,run=0;for(RunData r:runs){prep+=r.prep;run+=r.run;}float total=prep+run;float l=35,t=18,s=Math.min(getWidth()-70,150);android.graphics.RectF rect=new android.graphics.RectF(l,t,l+s,t+s);paint.setColor(Color.rgb(220,40,40));c.drawArc(rect,-90,360*prep/total,true,paint);paint.setColor(Color.rgb(210,150,0));c.drawArc(rect,-90+360*prep/total,360*run/total,true,paint);paint.setColor(Color.DKGRAY);paint.setTextSize(13);c.drawText("Preparation  " + formatAverage(prep,runs.size()),l+s+15,t+55,paint);c.drawText("Run  " + formatAverage(run,runs.size()),l+s+15,t+82,paint);}
+        private String formatAverage(float totalMillis, int count) { long averageMillis = Math.round(totalMillis / count); long seconds = averageMillis / 1000; return String.format("%02d:%02d avg", seconds / 60, seconds % 60); }
     }
 
     private void styleDialog(AlertDialog dialog) {
