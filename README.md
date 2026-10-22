@@ -2,7 +2,7 @@
 - Rashi and Albert :D
 - link : https://github.com/RashI0192/MDP-APP
 - We reubuilt the app to fix lag and bluetooth errors and followed Dr. Loke suggestions. 
-
+- Source Code Submission adheres to course instructions and is the only code submitted
 ## Features implemented in the app
 
 - Android remote-controller app with Home, Map Configuration, Bluetooth, and Chat/Communications tabs.
